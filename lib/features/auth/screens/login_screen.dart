@@ -6,6 +6,15 @@ import '../../../utils/app_toast.dart';
 import '../../../routes.dart';
 import '../services/customer_auth_api.dart';
 
+// 🔽 UI system imports
+import '../widgets/auth_skip_button.dart';
+import '../widgets/auth_logo.dart';
+import '../widgets/auth_heading.dart';
+import '../widgets/auth_phone_field.dart';
+import '../widgets/auth_primary_button.dart';
+import '../widgets/auth_terms_text.dart';
+import '../theme/auth_colors.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -14,15 +23,27 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _phoneController =
-      TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final FocusNode _phoneFocus = FocusNode();
 
   bool _isLoading = false;
+  bool _isValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.addListener(_validatePhone);
+  }
+
+  void _validatePhone() {
+    setState(() {
+      _isValid = Validators.isValidPhoneInput(_phoneController.text);
+    });
+  }
 
   Future<void> _sendOtp() async {
     final phoneInput = _phoneController.text;
 
-    // UI-level validation
     if (!Validators.isValidPhoneInput(phoneInput)) {
       AppToast.error('Enter a valid 10-digit mobile number');
       return;
@@ -30,147 +51,104 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final success =
-        await CustomerAuthApi.requestOtp(phoneInput);
+    final success = await CustomerAuthApi.requestOtp(phoneInput);
 
     setState(() => _isLoading = false);
 
     if (!success || !mounted) return;
 
-    // 🔑 WAIT for OTP result
     final result = await Navigator.pushNamed(
       context,
       AppRoutes.otp,
       arguments: phoneInput,
     );
 
-    // ✅ OTP verified → close login screen
     if (result == true && mounted) {
       Navigator.pop(context, true);
     }
   }
 
   void _skipLogin() {
-  if (Navigator.canPop(context)) {
-    Navigator.pop(context, false);
-  } else {
-    Navigator.pushReplacementNamed(
-      context,
-      AppRoutes.home,
-    );
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, false);
+    } else {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    }
   }
-}
-
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _phoneFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final viewHeight = MediaQuery.of(context).size.height;
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9),
+      resizeToAvoidBottomInset: true,
+      backgroundColor: AuthColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          TextButton(
-            onPressed: _skipLogin,
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                color: Color(0xFF2E7D32),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          AuthSkipButton(onTap: _skipLogin),
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior:
+              ScrollViewKeyboardDismissBehavior.onDrag,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: viewHeight - topPadding,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                // ✅ START FROM TOP (THIS IS THE FIX)
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
 
-              const Icon(
-                Icons.eco,
-                size: 60,
-                color: Color(0xFF2E7D32),
-              ),
-              const SizedBox(height: 16),
+                  /// LOGO
+                  const AuthLogo(),
 
-              const Text(
-                'Welcome',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1B5E20),
-                ),
-              ),
-              const SizedBox(height: 8),
+                  const SizedBox(height: 32),
 
-              const Text(
-                'Enter your mobile number to continue',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF388E3C),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.number,
-                maxLength: 10,
-                decoration: InputDecoration(
-                  prefixText: '+91 ',
-                  labelText: 'Mobile Number',
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  const AuthHeading(
+                    title: 'Welcome back',
+                    subtitle: 'Enter your number to continue',
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 40),
 
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _sendOtp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  AuthPhoneField(
+                    controller: _phoneController,
+                    focusNode: _phoneFocus,
+                    isValid: _isValid,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Send OTP',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
 
-              const Spacer(),
-            ],
+                  const SizedBox(height: 32),
+
+                  AuthPrimaryButton(
+                    text: 'Send OTP',
+                    isLoading: _isLoading,
+                    onPressed: _sendOtp,
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  const AuthTermsText(),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
           ),
         ),
       ),
