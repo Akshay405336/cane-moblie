@@ -75,4 +75,24 @@ class SecureStorage {
     await _storage.delete(key: _accessExpiryKey);
     await _storage.delete(key: _refreshExpiryKey);
   }
+
+    /* ================================================= */
+  /* GENERIC KEY-VALUE (NON-AUTH)                      */
+  /* ================================================= */
+
+  static Future<void> write(
+    String key,
+    String value,
+  ) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  static Future<String?> read(String key) async {
+    return _storage.read(key: key);
+  }
+
+  static Future<void> delete(String key) async {
+    await _storage.delete(key: key);
+  }
+
 }
