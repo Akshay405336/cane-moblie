@@ -1,6 +1,5 @@
 /// lib/features/auth/screens/otp_screen.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 
@@ -8,6 +7,11 @@ import '../../../utils/app_toast.dart';
 import '../../../utils/validators.dart';
 import '../../../utils/auth_state.dart';
 import '../services/customer_auth_api.dart';
+
+// UI system
+import '../widgets/auth_logo.dart';
+import '../widgets/auth_primary_button.dart';
+import '../theme/auth_colors.dart';
 
 class OtpScreen extends StatefulWidget {
   const OtpScreen({Key? key}) : super(key: key);
@@ -17,8 +21,7 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final TextEditingController _otpController =
-      TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
 
   bool _isLoading = false;
 
@@ -38,27 +41,20 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _phone =
-        ModalRoute.of(context)!.settings.arguments
-            as String;
+    _phone = ModalRoute.of(context)!.settings.arguments as String;
   }
 
   void _startCooldown() {
     _timer?.cancel();
     _cooldownSeconds = _initialCooldown;
 
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (_cooldownSeconds == 0) {
-          timer.cancel();
-        } else {
-          setState(() {
-            _cooldownSeconds--;
-          });
-        }
-      },
-    );
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldownSeconds == 0) {
+        timer.cancel();
+      } else {
+        setState(() => _cooldownSeconds--);
+      }
+    });
   }
 
   Future<void> _verifyOtp() async {
@@ -81,10 +77,7 @@ class _OtpScreenState extends State<OtpScreen> {
     if (!mounted) return;
 
     if (success) {
-      // ✅ Update global auth state
       AuthState.setAuthenticated(true);
-
-      // ✅ Close OTP screen and notify LoginScreen
       Navigator.pop(context, true);
     }
   }
@@ -110,111 +103,114 @@ class _OtpScreenState extends State<OtpScreen> {
       textStyle: const TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: Color(0xFF1B5E20),
+        color: Colors.black,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF81C784),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9),
+      resizeToAvoidBottomInset: true,
+      backgroundColor: AuthColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme:
-            const IconThemeData(color: Color(0xFF1B5E20)),
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back,
+            color: AuthColors.primary,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior:
+              ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 32),
 
-              const Text(
-                'Verify OTP',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1B5E20),
-                ),
-              ),
-              const SizedBox(height: 8),
+                /// LOGO
+                const AuthLogo(),
 
-              Text(
-                'Sent to +91 $_phone',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF388E3C),
-                ),
-              ),
+                const SizedBox(height: 32),
 
-              const SizedBox(height: 32),
-
-              Pinput(
-                controller: _otpController,
-                length: 6,
-                keyboardType: TextInputType.number,
-                defaultPinTheme: pinTheme,
-                focusedPinTheme: pinTheme.copyWith(
-                  decoration: pinTheme.decoration!.copyWith(
-                    border: Border.all(
-                      color: const Color(0xFF2E7D32),
-                      width: 2,
-                    ),
+                const Text(
+                  'OTP Code',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 8),
 
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed:
-                      _isLoading ? null : _verifyOtp,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF2E7D32),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
                     ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Verify OTP',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              Center(
-                child: _cooldownSeconds > 0
-                    ? Text(
-                        'Resend OTP in $_cooldownSeconds s',
+                    children: [
+                      const TextSpan(
+                        text:
+                            'Please type the OTP verification code sent to\n',
+                      ),
+                      TextSpan(
+                        text: '+91 $_phone',
                         style: const TextStyle(
-                          color: Color(0xFF388E3C),
+                          color: AuthColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                /// OTP INPUT
+                Pinput(
+                  controller: _otpController,
+                  length: 6,
+                  keyboardType: TextInputType.number,
+                  defaultPinTheme: pinTheme,
+                  focusedPinTheme: pinTheme.copyWith(
+                    decoration: pinTheme.decoration!.copyWith(
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              AuthColors.primary.withOpacity(0.4),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                /// RESEND
+                _cooldownSeconds > 0
+                    ? Text(
+                        'Resend code in $_cooldownSeconds s',
+                        style: const TextStyle(
+                          color: Colors.grey,
                         ),
                       )
                     : TextButton(
@@ -222,13 +218,24 @@ class _OtpScreenState extends State<OtpScreen> {
                         child: const Text(
                           'Resend OTP',
                           style: TextStyle(
-                            color: Color(0xFF2E7D32),
+                            color: AuthColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-              ),
-            ],
+
+                const SizedBox(height: 32),
+
+                /// VERIFY BUTTON
+                AuthPrimaryButton(
+                  text: 'Verify Code',
+                  isLoading: _isLoading,
+                  onPressed: _verifyOtp,
+                ),
+
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),
