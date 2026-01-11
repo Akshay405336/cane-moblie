@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 
+import '../../../routes.dart'; // ✅ ADDED
 import '../../../utils/app_toast.dart';
 import '../../../utils/validators.dart';
 import '../../../utils/auth_state.dart';
@@ -78,7 +79,12 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (success) {
       AuthState.setAuthenticated(true);
-      Navigator.pop(context, true);
+
+      // ✅ FIX: prevent route stack collapse → black screen
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.home,
+        (route) => false,
+      );
     }
   }
 
@@ -142,12 +148,8 @@ class _OtpScreenState extends State<OtpScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 32),
-
-                /// LOGO
                 const AuthLogo(),
-
                 const SizedBox(height: 32),
-
                 const Text(
                   'OTP Code',
                   style: TextStyle(
@@ -155,9 +157,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
@@ -180,10 +180,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
-                /// OTP INPUT
                 Pinput(
                   controller: _otpController,
                   length: 6,
@@ -202,16 +199,11 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
-                /// RESEND
                 _cooldownSeconds > 0
                     ? Text(
                         'Resend code in $_cooldownSeconds s',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                        ),
+                        style: const TextStyle(color: Colors.grey),
                       )
                     : TextButton(
                         onPressed: _resendOtp,
@@ -223,16 +215,12 @@ class _OtpScreenState extends State<OtpScreen> {
                           ),
                         ),
                       ),
-
                 const SizedBox(height: 32),
-
-                /// VERIFY BUTTON
                 AuthPrimaryButton(
                   text: 'Verify Code',
                   isLoading: _isLoading,
                   onPressed: _verifyOtp,
                 ),
-
                 const SizedBox(height: 24),
               ],
             ),

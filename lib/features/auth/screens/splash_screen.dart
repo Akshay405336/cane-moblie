@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _bootstrap() async {
     // Minimum splash time
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
     // Check session with backend
     final isLoggedIn = await SessionApi.me();
@@ -51,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFF2E7D32), // sugarcane green
+      backgroundColor: Color(0xFF03B602), // sugarcane green
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -67,6 +67,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 letterSpacing: 1.2,
               ),
             ),
+
           ],
         ),
       ),
