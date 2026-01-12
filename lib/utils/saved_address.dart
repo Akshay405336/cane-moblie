@@ -18,6 +18,32 @@ class SavedAddress {
   });
 
   // ------------------------------
+  // COPY (FOR EDIT FLOW)
+  // ------------------------------
+
+  SavedAddress copyWith({
+    String? label,
+    String? address,
+  }) {
+    return SavedAddress(
+      id: id,
+      type: type,
+      label: label ?? this.label,
+      address: address ?? this.address,
+    );
+  }
+
+  // ------------------------------
+  // UI HELPER (OPTIONAL)
+  // ------------------------------
+
+  /// Useful for highlighting selected address in UI
+  bool isActive(String? activeSavedAddressId) {
+    return activeSavedAddressId != null &&
+        activeSavedAddressId == id;
+  }
+
+  // ------------------------------
   // SERIALIZATION
   // ------------------------------
 

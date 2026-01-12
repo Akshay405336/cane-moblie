@@ -42,7 +42,7 @@ class AppHeader extends StatelessWidget
         ),
       ),
 
-      // 📍 LOCATION (PRIMARY)
+      // 📍 LOCATION (DISPLAY ONLY)
       title: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: isDetecting ? null : onLocationTap,
@@ -80,6 +80,7 @@ class AppHeader extends StatelessWidget
                           : Text(
                               LocationState.address,
                               key: ValueKey(
+                                // 🔐 stable key = no flicker
                                 LocationState.address,
                               ),
                               maxLines: 1,

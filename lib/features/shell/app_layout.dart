@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../home/screens/home_screen.dart';
@@ -21,13 +20,9 @@ class AppLayout extends StatefulWidget {
   State<AppLayout> createState() => _AppLayoutState();
 }
 
-class _AppLayoutState extends State<AppLayout>
-    with WidgetsBindingObserver {
+class _AppLayoutState extends State<AppLayout> {
   int _currentIndex = 0;
   bool _sheetOpen = false;
-
-  // 🔥 remembers ENABLE click across app resume
-  bool _userRequestedLocation = false;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -40,82 +35,54 @@ class _AppLayoutState extends State<AppLayout>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LocationState.load();
-      await _ensureLocation(); // silent check
+
+      // 🔐 DO NOTHING ELSE
+      // ❌ No GPS
+      // ❌ No permission check
+      // ❌ No auto bottom sheet
+      setState(() {});
     });
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// 🔄 BACK FROM SETTINGS
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _ensureLocation(); // continue flow if ENABLE was tapped
-    }
-  }
-
   // ===============================================================
-  // LOCATION FLOW (SINGLE SOURCE OF TRUTH)
+  // USER-TRIGGERED GPS FLOW ONLY
   // ===============================================================
 
-  Future<void> _ensureLocation({bool userTriggered = false}) async {
-    if (userTriggered) {
-      _userRequestedLocation = true;
-      LocationState.clearError();
-    }
+  Future<void> _useCurrentLocation() async {
+    LocationState.startDetecting();
+    setState(() {});
 
-    final shouldProceed = _userRequestedLocation;
+    final ready =
+        await LocationHelper.requestLocationAccessFromUser();
 
-    final ready = shouldProceed
-        ? await LocationHelper.ensureLocationReady()
-        : await LocationHelper.isReadySilently();
-
-    // ❌ Not ready → show sheet only
     if (!ready) {
-      _openLocationSheet();
+      LocationState.setError('Location permission required');
+      setState(() {});
       return;
     }
 
-    // ✅ READY → FETCH GPS LOCATION
     try {
-      LocationState.startDetecting();
-      setState(() {});
+      final address =
+          await LocationHelper.fetchCurrentAddress();
 
-      final address = await LocationHelper.fetchAddress()
-          .timeout(const Duration(seconds: 10));
+      if (address.isEmpty) {
+        LocationState.setError('Unable to detect location');
+        setState(() {});
+        return;
+      }
 
-      await LocationState.setAddress(address);
-
-      LocationState.stopDetecting();
-      _userRequestedLocation = false;
+      await LocationState.setGpsAddress(address);
 
       if (_sheetOpen && mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-        _sheetOpen = false;
+        Navigator.pop(context);
       }
 
       setState(() {});
-    }
-
-    on TimeoutException {
-      LocationState.setError(
-        'Unable to detect location. Try again.',
-      );
-      setState(() {});
-    }
-
-    catch (_) {
-      LocationState.setError(
-        'Unable to detect location',
-      );
+    } catch (_) {
+      LocationState.setError('Unable to detect location');
       setState(() {});
     }
   }
@@ -131,17 +98,15 @@ class _AppLayoutState extends State<AppLayout>
 
     showModalBottomSheet(
       context: context,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (_) {
         return LocationBottomSheet(
-          onUseCurrentLocation: () async {
-            await _ensureLocation(userTriggered: true);
-          },
+          onUseCurrentLocation: _useCurrentLocation,
           onSelectSavedAddress: ({
             required String id,
             required String address,
@@ -173,7 +138,7 @@ class _AppLayoutState extends State<AppLayout>
     return Scaffold(
       appBar: AppHeader(
         onAuthChanged: () => setState(() {}),
-        onLocationTap: _openLocationSheet
+        onLocationTap: _openLocationSheet,
       ),
       body: IndexedStack(
         index: _currentIndex,

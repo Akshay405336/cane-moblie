@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'secure_storage.dart';
 import 'saved_address.dart';
+import 'location_state.dart';
 
 class SavedAddressStorage {
   static const _key = 'saved_addresses';
@@ -36,6 +37,21 @@ class SavedAddressStorage {
   }
 
   // --------------------------------------------------
+  // UPDATE (EDIT ADDRESS)
+  // --------------------------------------------------
+
+  static Future<void> update(SavedAddress updated) async {
+    final list = await getAll();
+
+    final index =
+        list.indexWhere((a) => a.id == updated.id);
+    if (index == -1) return;
+
+    list[index] = updated;
+    await _persist(list);
+  }
+
+  // --------------------------------------------------
   // DELETE
   // --------------------------------------------------
 
@@ -43,6 +59,12 @@ class SavedAddressStorage {
     final list = await getAll();
     list.removeWhere((a) => a.id == id);
     await _persist(list);
+
+    // 🔐 IMPORTANT:
+    // If deleted address was active → clear location
+    if (LocationState.activeSavedAddressId == id) {
+      await LocationState.clearSavedAddress();
+    }
   }
 
   // --------------------------------------------------
