@@ -22,6 +22,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = AuthState.isAuthenticated;
+    final isDetecting = LocationState.isDetecting;
 
     return AppBar(
       elevation: 0,
@@ -32,23 +33,24 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF9FFF8), // creamy white
-              Color(0xFFE8F5E9), // light green wash
+              Color(0xFFF9FFF8),
+              Color(0xFFE8F5E9),
             ],
           ),
         ),
       ),
 
-      // 📍 LOCATION DROPDOWN (PRIMARY)
+      // 📍 LOCATION (PRIMARY)
       title: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _openLocationSheet(context),
+        onTap: isDetecting
+            ? null
+            : () => _openLocationSheet(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // SMALL LABEL
               const Text(
                 'Delivering to',
                 style: TextStyle(
@@ -57,10 +59,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 2),
 
-              // BIG LOCATION / SHIMMER
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -72,18 +72,24 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   const SizedBox(width: 6),
 
                   Flexible(
-                    child: LocationState.isDetecting
-                        ? _locationShimmer()
-                        : Text(
-                            LocationState.address,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1B5E20),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: isDetecting
+                          ? _locationShimmer()
+                          : Text(
+                              LocationState.address,
+                              key: ValueKey(
+                                LocationState.address,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1B5E20),
+                              ),
                             ),
-                          ),
+                    ),
                   ),
 
                   const SizedBox(width: 4),
@@ -103,7 +109,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           splashRadius: 22,
           icon: Icon(
-            isLoggedIn ? Icons.account_circle : Icons.person_outline,
+            isLoggedIn
+                ? Icons.account_circle
+                : Icons.person_outline,
             size: 26,
             color: const Color(0xFF2E7D32),
           ),
@@ -113,7 +121,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 context,
                 AppRoutes.login,
               );
-
               if (result == true) {
                 onAuthChanged();
               }
@@ -126,7 +133,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// ✨ SHIMMER FOR LOCATION
+  // ------------------------------------------------------------------
+  // SHIMMER
+  // ------------------------------------------------------------------
+
   Widget _locationShimmer() {
     return Shimmer.fromColors(
       baseColor: Colors.green.shade200,
@@ -142,13 +152,18 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// 📍 LOCATION SHEET
+  // ------------------------------------------------------------------
+  // LOCATION SHEET
+  // ------------------------------------------------------------------
+
   void _openLocationSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(22),
+        ),
       ),
       builder: (_) {
         return LocationBottomSheet(
@@ -161,12 +176,17 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  /// 👤 USER MENU
+  // ------------------------------------------------------------------
+  // USER MENU
+  // ------------------------------------------------------------------
+
   void _showUserSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(22),
+        ),
       ),
       builder: (_) {
         return SafeArea(

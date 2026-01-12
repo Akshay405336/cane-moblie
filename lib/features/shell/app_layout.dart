@@ -20,9 +20,13 @@ class AppLayout extends StatefulWidget {
   State<AppLayout> createState() => _AppLayoutState();
 }
 
-class _AppLayoutState extends State<AppLayout> {
+class _AppLayoutState extends State<AppLayout>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
-  bool _locationSheetShown = false;
+  bool _sheetOpen = false;
+
+  // 🔥 THIS IS THE MISSING PIECE
+  bool _userRequestedLocation = false;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -35,29 +39,87 @@ class _AppLayoutState extends State<AppLayout> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-    // 🔥 Load saved location first, then enforce if missing
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LocationState.load();
-      _ensureLocation();
-      setState(() {}); // refresh header after load
+      await _ensureLocation(); // silent check
     });
   }
 
-  /// 📍 REAL LOCATION FLOW (guest + logged-in)
-  Future<void> _ensureLocation() async {
-    // Already selected → nothing to do
-    if (LocationState.hasLocation) return;
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-    // Prevent multiple sheets
-    if (_locationSheetShown) return;
-    _locationSheetShown = true;
+  /// 🔄 Coming back from settings
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _ensureLocation(); // continue flow if user requested
+    }
+  }
 
-    if (!mounted) return;
+  // ===============================================================
+  // LOCATION FLOW (SINGLE SOURCE OF TRUTH)
+  // ===============================================================
+
+  Future<void> _ensureLocation({bool userTriggered = false}) async {
+    // 🔑 remember user intent
+    if (userTriggered) {
+      _userRequestedLocation = true;
+    }
+
+    final shouldProceed = _userRequestedLocation;
+
+    final ready = shouldProceed
+        ? await LocationHelper.ensureLocationReady() // opens settings
+        : await LocationHelper.isReadySilently();    // silent check
+
+    // ❌ Still not ready → show sheet only
+    if (!ready) {
+      _openLocationSheet();
+      return;
+    }
+
+    // ✅ READY → FETCH LOCATION
+    try {
+      LocationState.startDetecting();
+      setState(() {});
+
+      final address = await LocationHelper.fetchAddress();
+      await LocationState.setAddress(address);
+
+      LocationState.stopDetecting();
+      _userRequestedLocation = false; // ✅ reset intent
+
+      // Close sheet if open
+      if (_sheetOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        _sheetOpen = false;
+      }
+
+      setState(() {});
+    } catch (_) {
+      LocationState.stopDetecting();
+      LocationState.setError('Unable to detect location');
+      setState(() {});
+    }
+  }
+
+  // ===============================================================
+  // OPEN LOCATION SHEET
+  // ===============================================================
+
+  void _openLocationSheet() {
+    if (_sheetOpen || !mounted) return;
+
+    _sheetOpen = true;
 
     showModalBottomSheet(
       context: context,
-      isDismissible: false, // Swiggy-style
+      isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -66,56 +128,29 @@ class _AppLayoutState extends State<AppLayout> {
       builder: (_) {
         return LocationBottomSheet(
           onUseCurrentLocation: () async {
-            try {
-              // ✨ START SHIMMER IN HEADER
-              LocationState.startDetecting();
-              setState(() {});
-
-              // 1️⃣ Ensure GPS + permission
-              await LocationHelper.ensureLocationReady();
-
-              // 2️⃣ Fetch address
-              final address =
-                  await LocationHelper.fetchAddress();
-
-              // 3️⃣ Save + persist
-              await LocationState.setAddress(address);
-
-              // ✨ STOP SHIMMER
-              LocationState.stopDetecting();
-
-              if (mounted) {
-                Navigator.pop(context);
-                setState(() {});
-              }
-            } catch (_) {
-              // ✨ STOP SHIMMER EVEN ON FAILURE
-              LocationState.stopDetecting();
-              setState(() {});
-            }
+            await _ensureLocation(userTriggered: true);
           },
         );
       },
-    );
+    ).then((_) {
+      _sheetOpen = false;
+    });
   }
+
+  // ===============================================================
+  // UI
+  // ===============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🌱 HEADER (location shimmer reacts here)
       appBar: AppHeader(
-        onAuthChanged: () {
-          setState(() {});
-        },
+        onAuthChanged: () => setState(() {}),
       ),
-
-      // 📄 BODY
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
-
-      // 🧭 BOTTOM NAV
       bottomNavigationBar: AppNavBottom(
         currentIndex: _currentIndex,
         onTap: (index) {

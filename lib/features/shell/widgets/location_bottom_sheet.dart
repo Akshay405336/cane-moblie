@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-class LocationBottomSheet extends StatefulWidget {
+import '../../../utils/location_state.dart';
+
+class LocationBottomSheet extends StatelessWidget {
   final Future<void> Function() onUseCurrentLocation;
 
   const LocationBottomSheet({
@@ -10,30 +12,9 @@ class LocationBottomSheet extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<LocationBottomSheet> createState() =>
-      _LocationBottomSheetState();
-}
-
-class _LocationBottomSheetState extends State<LocationBottomSheet> {
-  bool _isDetecting = false;
-
-  Future<void> _handleDetect() async {
-    if (_isDetecting) return;
-
-    setState(() => _isDetecting = true);
-
-    try {
-      await widget.onUseCurrentLocation();
-    } finally {
-      if (mounted) {
-        setState(() => _isDetecting = false);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
+    final isDetecting = LocationState.isDetecting;
 
     return Container(
       height: height * 0.55,
@@ -47,206 +28,232 @@ class _LocationBottomSheetState extends State<LocationBottomSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🌱 HEADER
-          Row(
-            children: const [
-              Text('📍', style: TextStyle(fontSize: 26)),
-              SizedBox(width: 8),
-              Text(
-                'Select delivery location',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1B5E20),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // 😢 INFO BOX
-          _isDetecting
-              ? _shimmerBox(height: 52)
-              : _infoBox(),
-
-          const SizedBox(height: 20),
-
-          // 🟢 PRIMARY ACTION
-          GestureDetector(
-            onTap: _isDetecting ? null : _handleDetect,
-            child: _isDetecting
-                ? _shimmerButton()
-                : _enableLocationButton(),
-          ),
-
+          _permissionBanner(isDetecting),
           const SizedBox(height: 28),
-
-          const Text(
-            'Saved addresses',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2E7D32),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.2,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _isDetecting
-                    ? _shimmerCard()
-                    : _emptyAddressCard(Icons.home_outlined, 'Home'),
-                _isDetecting
-                    ? _shimmerCard()
-                    : _emptyAddressCard(Icons.work_outline, 'Work'),
-              ],
-            ),
-          ),
+          _addressHeader(),
+          const SizedBox(height: 16),
+          _addressGrid(),
         ],
       ),
     );
   }
 
-  // ---------------- UI PIECES ----------------
+  // ===============================================================
+  // PERMISSION BANNER (UI ONLY)
+  // ===============================================================
 
-  Widget _infoBox() {
+  Widget _permissionBanner(bool isDetecting) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFDE7),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: const [
-          Text('😢', style: TextStyle(fontSize: 22)),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'We need your location to show nearby fresh juice stores.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF6D4C41),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _enableLocationButton() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF66BB6A),
-            Color(0xFF43A047),
-          ],
-        ),
+        color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
-        children: const [
-          Icon(Icons.my_location, color: Colors.white, size: 26),
-          SizedBox(width: 14),
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2E7D32),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.gps_fixed,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              children: const [
                 Text(
-                  'Use current location',
+                  'Location permission is off',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1B5E20),
                   ),
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Detecting location automatically',
+                  'Enable for accurate delivery',
                   style: TextStyle(
-                    color: Colors.white70,
                     fontSize: 12,
+                    color: Color(0xFF558B2F),
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.arrow_forward_ios,
-              color: Colors.white, size: 16),
+          TextButton(
+            onPressed: isDetecting ? null : onUseCurrentLocation,
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 10,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: isDetecting
+                ? _buttonShimmer()
+                : const Text(
+                    'ENABLE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  // ---------------- SHIMMERS ----------------
+  // ===============================================================
+  // HEADER
+  // ===============================================================
 
-  Widget _shimmerBox({required double height}) {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade300,
-      highlightColor: Colors.grey.shade100,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+  Widget _addressHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: const [
+        Text(
+          'Select delivery address',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1B5E20),
+          ),
         ),
+        Text(
+          'VIEW ALL',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2E7D32),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===============================================================
+  // ADDRESS GRID
+  // ===============================================================
+
+  Widget _addressGrid() {
+    return Expanded(
+      child: GridView.count(
+        crossAxisCount: 2,
+        mainAxisSpacing: 14,
+        crossAxisSpacing: 14,
+        childAspectRatio: 1.15,
+        children: const [
+          AddressPlaceholder(icon: Icons.home_outlined, label: 'Home'),
+          AddressPlaceholder(icon: Icons.work_outline, label: 'Work'),
+          AddNewAddressCard(),
+        ],
       ),
     );
   }
 
-  Widget _shimmerButton() {
-    return _shimmerBox(height: 72);
-  }
+  // ===============================================================
+  // SHIMMER
+  // ===============================================================
 
-  Widget _shimmerCard() {
+  Widget _buttonShimmer() {
     return Shimmer.fromColors(
       baseColor: Colors.grey.shade300,
       highlightColor: Colors.grey.shade100,
       child: Container(
+        width: 48,
+        height: 14,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(6),
         ),
       ),
     );
   }
+}
 
-  Widget _emptyAddressCard(IconData icon, String label) {
+// ===============================================================
+// ADDRESS PLACEHOLDER
+// ===============================================================
+
+class AddressPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const AddressPlaceholder({
+    Key? key,
+    required this.icon,
+    required this.label,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE0F2F1)),
       ),
-      padding: const EdgeInsets.all(14),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFF81C784), size: 28),
-          const SizedBox(height: 8),
+          Icon(icon, size: 30, color: const Color(0xFF81C784)),
+          const SizedBox(height: 10),
           Text(
             label,
             style: const TextStyle(
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: Color(0xFF558B2F),
             ),
           ),
           const SizedBox(height: 4),
           const Text(
-            'Not added yet',
+            'Not added',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===============================================================
+// ADD NEW ADDRESS CARD
+// ===============================================================
+
+class AddNewAddressCard extends StatelessWidget {
+  const AddNewAddressCard({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F8E9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFC8E6C9)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.add, color: Color(0xFF2E7D32), size: 32),
+          SizedBox(height: 8),
+          Text(
+            'Add new address',
             style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2E7D32),
             ),
           ),
         ],
