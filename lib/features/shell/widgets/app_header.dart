@@ -6,14 +6,16 @@ import '../../../utils/auth_state.dart';
 import '../../../utils/location_state.dart';
 import '../../../utils/app_toast.dart';
 import '../../auth/services/session_api.dart';
-import 'location_bottom_sheet.dart';
 
-class AppHeader extends StatelessWidget implements PreferredSizeWidget {
+class AppHeader extends StatelessWidget
+    implements PreferredSizeWidget {
   final VoidCallback onAuthChanged;
+  final VoidCallback onLocationTap;
 
   const AppHeader({
     Key? key,
     required this.onAuthChanged,
+    required this.onLocationTap,
   }) : super(key: key);
 
   @override
@@ -43,9 +45,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       // 📍 LOCATION (PRIMARY)
       title: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: isDetecting
-            ? null
-            : () => _openLocationSheet(context),
+        onTap: isDetecting ? null : onLocationTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
@@ -73,7 +73,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
                   Flexible(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
+                      duration:
+                          const Duration(milliseconds: 250),
                       child: isDetecting
                           ? _locationShimmer()
                           : Text(
@@ -149,30 +150,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           borderRadius: BorderRadius.circular(6),
         ),
       ),
-    );
-  }
-
-  // ------------------------------------------------------------------
-  // LOCATION SHEET
-  // ------------------------------------------------------------------
-
-  void _openLocationSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(22),
-        ),
-      ),
-      builder: (_) {
-        return LocationBottomSheet(
-          onUseCurrentLocation: () async {
-            // handled in AppLayout
-            Navigator.pop(context);
-          },
-        );
-      },
     );
   }
 

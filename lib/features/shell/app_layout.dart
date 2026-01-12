@@ -84,20 +84,19 @@ class _AppLayoutState extends State<AppLayout>
       return;
     }
 
-    // ✅ READY → FETCH LOCATION
+    // ✅ READY → FETCH GPS LOCATION
     try {
       LocationState.startDetecting();
       setState(() {});
 
       final address = await LocationHelper.fetchAddress()
-          .timeout(const Duration(seconds: 10)); // ⏱ TIMEOUT
+          .timeout(const Duration(seconds: 10));
 
       await LocationState.setAddress(address);
 
       LocationState.stopDetecting();
       _userRequestedLocation = false;
 
-      // Close sheet if open
       if (_sheetOpen && mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         _sheetOpen = false;
@@ -106,7 +105,6 @@ class _AppLayoutState extends State<AppLayout>
       setState(() {});
     }
 
-    // ⏱ GPS TIMEOUT
     on TimeoutException {
       LocationState.setError(
         'Unable to detect location. Try again.',
@@ -114,7 +112,6 @@ class _AppLayoutState extends State<AppLayout>
       setState(() {});
     }
 
-    // ❌ ANY OTHER FAILURE
     catch (_) {
       LocationState.setError(
         'Unable to detect location',
@@ -145,6 +142,21 @@ class _AppLayoutState extends State<AppLayout>
           onUseCurrentLocation: () async {
             await _ensureLocation(userTriggered: true);
           },
+          onSelectSavedAddress: ({
+            required String id,
+            required String address,
+          }) async {
+            await LocationState.setSavedAddress(
+              id: id,
+              address: address,
+            );
+
+            if (mounted) {
+              Navigator.pop(context);
+            }
+
+            setState(() {});
+          },
         );
       },
     ).then((_) {
@@ -161,6 +173,7 @@ class _AppLayoutState extends State<AppLayout>
     return Scaffold(
       appBar: AppHeader(
         onAuthChanged: () => setState(() {}),
+        onLocationTap: _openLocationSheet
       ),
       body: IndexedStack(
         index: _currentIndex,
