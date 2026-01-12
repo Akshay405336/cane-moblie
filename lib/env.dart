@@ -4,11 +4,11 @@ class Env {
   static const bool isProd = false;
 
   /// Base API URL
-  /// DEV: local backend over Wi-Fi (Android real device)
+  /// DEV: ngrok tunnel (real mobile devices)
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://192.168.1.5:4000';
+      : 'https://inapt-preceremonial-nicky.ngrok-free.dev';
 
   /// App name
   static const String appName = 'Cane & Tender';

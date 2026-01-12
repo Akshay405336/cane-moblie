@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../home/screens/home_screen.dart';
@@ -25,7 +26,7 @@ class _AppLayoutState extends State<AppLayout>
   int _currentIndex = 0;
   bool _sheetOpen = false;
 
-  // 🔥 THIS IS THE MISSING PIECE
+  // 🔥 remembers ENABLE click across app resume
   bool _userRequestedLocation = false;
 
   final List<Widget> _pages = const [
@@ -53,11 +54,11 @@ class _AppLayoutState extends State<AppLayout>
     super.dispose();
   }
 
-  /// 🔄 Coming back from settings
+  /// 🔄 BACK FROM SETTINGS
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _ensureLocation(); // continue flow if user requested
+      _ensureLocation(); // continue flow if ENABLE was tapped
     }
   }
 
@@ -66,18 +67,18 @@ class _AppLayoutState extends State<AppLayout>
   // ===============================================================
 
   Future<void> _ensureLocation({bool userTriggered = false}) async {
-    // 🔑 remember user intent
     if (userTriggered) {
       _userRequestedLocation = true;
+      LocationState.clearError();
     }
 
     final shouldProceed = _userRequestedLocation;
 
     final ready = shouldProceed
-        ? await LocationHelper.ensureLocationReady() // opens settings
-        : await LocationHelper.isReadySilently();    // silent check
+        ? await LocationHelper.ensureLocationReady()
+        : await LocationHelper.isReadySilently();
 
-    // ❌ Still not ready → show sheet only
+    // ❌ Not ready → show sheet only
     if (!ready) {
       _openLocationSheet();
       return;
@@ -88,11 +89,13 @@ class _AppLayoutState extends State<AppLayout>
       LocationState.startDetecting();
       setState(() {});
 
-      final address = await LocationHelper.fetchAddress();
+      final address = await LocationHelper.fetchAddress()
+          .timeout(const Duration(seconds: 10)); // ⏱ TIMEOUT
+
       await LocationState.setAddress(address);
 
       LocationState.stopDetecting();
-      _userRequestedLocation = false; // ✅ reset intent
+      _userRequestedLocation = false;
 
       // Close sheet if open
       if (_sheetOpen && mounted) {
@@ -101,9 +104,21 @@ class _AppLayoutState extends State<AppLayout>
       }
 
       setState(() {});
-    } catch (_) {
-      LocationState.stopDetecting();
-      LocationState.setError('Unable to detect location');
+    }
+
+    // ⏱ GPS TIMEOUT
+    on TimeoutException {
+      LocationState.setError(
+        'Unable to detect location. Try again.',
+      );
+      setState(() {});
+    }
+
+    // ❌ ANY OTHER FAILURE
+    catch (_) {
+      LocationState.setError(
+        'Unable to detect location',
+      );
       setState(() {});
     }
   }
