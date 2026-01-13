@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/category.model.dart';
-import '../services/category_api.dart';
+import '../services/category_socket_service.dart';
 import '../widgets/category_list.widget.dart';
+import '../widgets/category_shimmer.widget.dart';
 import 'categories.screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,14 +20,40 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCategories();
+
+    // 🔥 SUBSCRIBE FIRST
+    CategorySocketService.subscribe(_onCategories);
+
+    // 🔌 ENSURE SOCKET IS CONNECTED
+    CategorySocketService.connect();
+
+    // 🛟 SAFETY TIMEOUT (prevents infinite shimmer)
+    Future.delayed(const Duration(seconds: 10), () {
+      if (!mounted) return;
+      if (_loadingCategories) {
+        setState(() {
+          _loadingCategories = false;
+        });
+      }
+    });
   }
 
-  Future<void> _loadCategories() async {
-    final data = await CategoryApi.getAll();
+  @override
+  void dispose() {
+    // 🟢 ONLY unsubscribe (do NOT disconnect globally)
+    CategorySocketService.unsubscribe(_onCategories);
+    super.dispose();
+  }
+
+  /* -------------------------------------------------- */
+  /* SOCKET HANDLER                                     */
+  /* -------------------------------------------------- */
+
+  void _onCategories(List<Category> categories) {
     if (!mounted) return;
+
     setState(() {
-      _categories = data;
+      _categories = categories;
       _loadingCategories = false;
     });
   }
@@ -52,17 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /* -------------------------------------------------- */
-  /* CATEGORY SECTION                                  */
+  /* CATEGORY SECTION                                   */
   /* -------------------------------------------------- */
 
   Widget _categoryHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
             'Fresh Categories',
@@ -77,8 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      const CategoriesScreen(),
+                  builder: (_) => const CategoriesScreen(),
                 ),
               );
             },
@@ -97,19 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _categorySection() {
     if (_loadingCategories) {
-      return const SizedBox(
-        height: 110,
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const CategoryShimmer();
     }
 
     if (_categories.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: 16,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 16),
         child: Text(
           'No categories available',
           style: TextStyle(color: Colors.grey),
@@ -123,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /* -------------------------------------------------- */
-  /* HERO BANNER                                       */
+  /* HERO BANNER                                        */
   /* -------------------------------------------------- */
 
   Widget _heroBanner() {
@@ -143,8 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Fresh. Natural.\nCold Pressed.',
