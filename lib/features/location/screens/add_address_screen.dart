@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../utils/saved_address.dart';
 import '../../../utils/saved_address_storage.dart';
@@ -29,8 +28,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   void initState() {
     super.initState();
 
-    // ✏️ EDIT MODE PREFILL
-    if (widget.existing != null) {
+    if (_isEdit) {
       _controller.text = widget.existing!.address;
       _type = widget.existing!.type;
     }
@@ -42,21 +40,24 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     super.dispose();
   }
 
+  // =================================================
+  // SAVE / UPDATE
+  // =================================================
+
   Future<void> _save() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
     setState(() => _saving = true);
 
-    // ✏️ EDIT EXISTING ADDRESS
     if (_isEdit) {
+      // -------- UPDATE --------
       final updated = widget.existing!.copyWith(
         address: text,
       );
 
       await SavedAddressStorage.update(updated);
 
-      // 🔁 If this address is active → update header
       if (LocationState.activeSavedAddressId ==
           updated.id) {
         await LocationState.setSavedAddress(
@@ -64,25 +65,45 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           address: updated.address,
         );
       }
-    }
-
-    // ➕ ADD NEW ADDRESS
-    else {
-      final address = SavedAddress(
-        id: const Uuid().v4(),
+    } else {
+      // -------- CREATE --------
+      final temp = SavedAddress(
+        id: '', // backend assigns
         type: _type,
         label: _labelForType(_type),
         address: text,
       );
 
-      await SavedAddressStorage.save(address);
+      await SavedAddressStorage.save(temp);
+
+      // ✅ Deterministic selection
+      final list = await SavedAddressStorage.getAll();
+      final created = list.firstWhere(
+        (a) => a.type == _type,
+        orElse: () => list.last,
+      );
 
       await LocationState.setSavedAddress(
-        id: address.id,
-        address: address.address,
+        id: created.id,
+        address: created.address,
       );
     }
 
+    if (mounted) Navigator.pop(context);
+  }
+
+  // =================================================
+  // DELETE
+  // =================================================
+
+  Future<void> _delete() async {
+    if (!_isEdit) return;
+
+    final id = widget.existing!.id;
+    await SavedAddressStorage.delete(id);
+
+    // Active address cleanup already handled,
+    // this just makes intent explicit
     if (mounted) Navigator.pop(context);
   }
 
@@ -97,11 +118,22 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     }
   }
 
+  // =================================================
+  // UI
+  // =================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEdit ? 'Edit address' : 'Add address'),
+        actions: [
+          if (_isEdit)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _saving ? null : _delete,
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -110,13 +142,10 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           children: [
             const Text(
               'Save address as',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
-            // 🔒 TYPE LOCKED DURING EDIT
             IgnorePointer(
               ignoring: _isEdit,
               child: _typeSelector(),
@@ -125,9 +154,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             const SizedBox(height: 24),
             const Text(
               'Address',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
 

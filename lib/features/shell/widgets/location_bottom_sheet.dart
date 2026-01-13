@@ -32,10 +32,10 @@ class _LocationBottomSheetState
   @override
   void initState() {
     super.initState();
-    _load();
+    _reload();
   }
 
-  void _load() {
+  void _reload() {
     _future = SavedAddressStorage.getAll();
   }
 
@@ -49,7 +49,8 @@ class _LocationBottomSheetState
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       decoration: const BoxDecoration(
         color: Color(0xFFF9FFF8),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,18 +69,19 @@ class _LocationBottomSheetState
           const SectionTitle(text: 'Saved addresses'),
           const SizedBox(height: 12),
 
+          // ---------------- SAVED ADDRESSES ----------------
           Expanded(
             child: SavedAddressList(
               future: _future,
               onSelect: widget.onSelectSavedAddress,
-              onRefresh: () => setState(_load),
             ),
           ),
 
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          AddNewAddressTile(
+          // ---------------- ADD NEW ADDRESS ----------------
+          InkWell(
             onTap: () async {
               await Navigator.push(
                 context,
@@ -87,8 +89,24 @@ class _LocationBottomSheetState
                   builder: (_) => const AddAddressScreen(),
                 ),
               );
-              setState(_load);
+
+              // Refresh after returning
+              setState(_reload);
             },
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: const [
+                Icon(Icons.add, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  'Add new address',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../routes.dart';
+import '../../../utils/auth_state.dart';
 import '../../../utils/location_state.dart';
 import '../../../utils/saved_address.dart';
-import '../../../utils/saved_address_storage.dart';
-import '../../location/screens/add_address_screen.dart';
 import 'location_tiles.dart';
 
 class SavedAddressList extends StatelessWidget {
@@ -12,35 +12,47 @@ class SavedAddressList extends StatelessWidget {
     required String id,
     required String address,
   }) onSelect;
-  final VoidCallback onRefresh;
 
   const SavedAddressList({
     Key? key,
     required this.future,
     required this.onSelect,
-    required this.onRefresh,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // --------------------------------------------------
+    // GUEST FALLBACK
+    // --------------------------------------------------
+    if (!AuthState.isAuthenticated) {
+      return const _GuestFallback();
+    }
+
+    // --------------------------------------------------
+    // LOGGED-IN FLOW (DISPLAY ONLY)
+    // --------------------------------------------------
     return FutureBuilder<List<SavedAddress>>(
       future: future,
       builder: (context, snapshot) {
         final list = snapshot.data ?? [];
 
+        // EMPTY
         if (list.isEmpty) {
           return const EmptySavedAddress();
         }
 
+        // LIST
         return ListView.separated(
           itemCount: list.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, __) =>
+              const SizedBox(height: 8),
           itemBuilder: (_, index) {
             final address = list[index];
 
             final isActive =
                 LocationState.isSavedAddress &&
-                LocationState.activeSavedAddressId == address.id;
+                LocationState.activeSavedAddressId ==
+                    address.id;
 
             return AddressTile(
               icon: iconForType(address.type),
@@ -53,28 +65,51 @@ class SavedAddressList extends StatelessWidget {
                   address: address.address,
                 );
               },
-              onEdit: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        AddAddressScreen(existing: address),
-                  ),
-                );
-                onRefresh();
-              },
-              onDelete: () async {
-                await SavedAddressStorage.delete(address.id);
-
-                // 🔐 IMPORTANT:
-                // Do NOT auto-select any remaining address
-                // User must choose explicitly
-                onRefresh();
-              },
             );
           },
         );
       },
+    );
+  }
+}
+
+// =====================================================
+// GUEST UI
+// =====================================================
+
+class _GuestFallback extends StatelessWidget {
+  const _GuestFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          'Save addresses for faster checkout',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Login to add and manage your saved addresses',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.login,
+            );
+          },
+          child: const Text('Login'),
+        ),
+      ],
     );
   }
 }

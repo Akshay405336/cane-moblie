@@ -4,8 +4,6 @@ import 'package:shimmer/shimmer.dart';
 import '../../../routes.dart';
 import '../../../utils/auth_state.dart';
 import '../../../utils/location_state.dart';
-import '../../../utils/app_toast.dart';
-import '../../auth/services/session_api.dart';
 
 class AppHeader extends StatelessWidget
     implements PreferredSizeWidget {
@@ -60,7 +58,6 @@ class AppHeader extends StatelessWidget
                 ),
               ),
               const SizedBox(height: 2),
-
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -70,7 +67,6 @@ class AppHeader extends StatelessWidget
                     color: Color(0xFF43A047),
                   ),
                   const SizedBox(width: 6),
-
                   Flexible(
                     child: AnimatedSwitcher(
                       duration:
@@ -80,7 +76,6 @@ class AppHeader extends StatelessWidget
                           : Text(
                               LocationState.address,
                               key: ValueKey(
-                                // 🔐 stable key = no flicker
                                 LocationState.address,
                               ),
                               maxLines: 1,
@@ -93,7 +88,6 @@ class AppHeader extends StatelessWidget
                             ),
                     ),
                   ),
-
                   const SizedBox(width: 4),
                   const Icon(
                     Icons.keyboard_arrow_down_rounded,
@@ -106,7 +100,7 @@ class AppHeader extends StatelessWidget
         ),
       ),
 
-      // 👤 USER ICON
+      // 👤 PROFILE / LOGIN
       actions: [
         IconButton(
           splashRadius: 22,
@@ -118,17 +112,24 @@ class AppHeader extends StatelessWidget
             color: const Color(0xFF2E7D32),
           ),
           onPressed: () async {
+            // 🔐 NOT LOGGED IN → LOGIN
             if (!isLoggedIn) {
               final result = await Navigator.pushNamed(
                 context,
                 AppRoutes.login,
               );
+
               if (result == true) {
                 onAuthChanged();
               }
-            } else {
-              _showUserSheet(context);
+              return;
             }
+
+            // 👤 LOGGED IN → PROFILE MAIN PAGE
+            Navigator.pushNamed(
+              context,
+              AppRoutes.profile,
+            );
           },
         ),
       ],
@@ -151,52 +152,6 @@ class AppHeader extends StatelessWidget
           borderRadius: BorderRadius.circular(6),
         ),
       ),
-    );
-  }
-
-  // ------------------------------------------------------------------
-  // USER MENU
-  // ------------------------------------------------------------------
-
-  void _showUserSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(22),
-        ),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const ListTile(
-                leading: Icon(Icons.person),
-                title: Text('Account'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.logout),
-                title: const Text('Logout'),
-                onTap: () async {
-                  await SessionApi.logout();
-                  AuthState.reset();
-                  AppToast.info('Logged out');
-
-                  Navigator.pop(context);
-                  onAuthChanged();
-
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    AppRoutes.login,
-                    (_) => false,
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

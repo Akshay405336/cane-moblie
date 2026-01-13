@@ -38,7 +38,8 @@ class LocationState {
 
   static bool get isSavedAddress => _source == AddressSource.saved;
 
-  static String? get activeSavedAddressId => _activeSavedAddressId;
+  static String? get activeSavedAddressId =>
+      _activeSavedAddressId;
 
   static bool get isDetecting => _isDetecting;
 
@@ -59,12 +60,16 @@ class LocationState {
   /// Load persisted location
   /// 🚫 DOES NOT trigger GPS
   static Future<void> load() async {
-    final storedAddress = await SecureStorage.read(_locationKey);
-    final storedSource = await SecureStorage.read(_addressSourceKey);
-    final savedId = await SecureStorage.read(_activeSavedIdKey);
+    final storedAddress =
+        await SecureStorage.read(_locationKey);
+    final storedSource =
+        await SecureStorage.read(_addressSourceKey);
+    final savedId =
+        await SecureStorage.read(_activeSavedIdKey);
 
-    _address =
-        storedAddress?.trim().isEmpty == true ? null : storedAddress;
+    _address = storedAddress?.trim().isEmpty == true
+        ? null
+        : storedAddress;
 
     if (_address == null) {
       _source = null;
@@ -99,7 +104,6 @@ class LocationState {
   }
 
   /// ✅ The ONLY method that can set GPS address
-  /// 🚨 Must be called explicitly by UI action
   static Future<void> setGpsAddress(String value) async {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return;
@@ -162,6 +166,11 @@ class LocationState {
 
   static void clearError() {
     _errorMessage = null;
+  }
+
+  /// 🔐 Called explicitly on logout
+  static Future<void> onLogout() async {
+    await clear();
   }
 
   /// Full reset (logout / app reset)

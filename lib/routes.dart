@@ -1,10 +1,13 @@
-/// lib/routes.dart
 import 'package:flutter/material.dart';
 
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/otp_screen.dart';
-import 'features/shell/app_layout.dart'; // 👈 ADD THIS
+import 'features/shell/app_layout.dart';
+
+// 🧑 PROFILE
+import 'features/profile/screens/profile_screen.dart';
+import 'features/profile/screens/saved_addresses_screen.dart';
 
 class AppRoutes {
   /* ================================================= */
@@ -16,6 +19,10 @@ class AppRoutes {
   static const String otp = '/otp';
   static const String home = '/home';
 
+  // 👤 PROFILE
+  static const String profile = '/profile';
+  static const String savedAddresses = '/saved-addresses';
+
   /* ================================================= */
   /* ROUTE MAP                                        */
   /* ================================================= */
@@ -24,6 +31,12 @@ class AppRoutes {
     splash: (_) => const SplashScreen(),
     login: (_) => const LoginScreen(),
     otp: (_) => const OtpScreen(),
-    home: (_) => const AppLayout(), // 👈 CHANGE THIS
+
+    // 🏠 MAIN APP
+    home: (_) => const AppLayout(),
+
+    // 👤 PROFILE
+    profile: (_) => const ProfileScreen(),
+    savedAddresses: (_) => const SavedAddressesScreen(),
   };
 }
