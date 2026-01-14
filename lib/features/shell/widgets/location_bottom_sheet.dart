@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/location_helper.dart';
 import '../../../utils/location_state.dart';
 import '../../../utils/saved_address.dart';
 import '../../../utils/saved_address_storage.dart';
@@ -28,88 +29,144 @@ class LocationBottomSheet extends StatefulWidget {
 class _LocationBottomSheetState
     extends State<LocationBottomSheet> {
   late Future<List<SavedAddress>> _future;
+  bool _locationServiceOn = true;
 
   @override
   void initState() {
     super.initState();
-    _reload();
+    _init();
   }
 
-  void _reload() {
+  Future<void> _init() async {
     _future = SavedAddressStorage.getAll();
+    _locationServiceOn =
+        await LocationHelper.canUseLocationSilently();
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDetecting = LocationState.isDetecting;
     final height = MediaQuery.of(context).size.height;
 
-    return Container(
-      height: height * 0.6,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF9FFF8),
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const BottomSheetHandle(),
-          const SizedBox(height: 16),
-          const BottomSheetTitle(),
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Container(
+        height: height * 0.6,
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: const BoxDecoration(
+          color: Color(0xFFF9FFF8),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: AnimatedBuilder(
+          animation: LocationDetectingListenable(),
+          builder: (context, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const BottomSheetHandle(),
+                const SizedBox(height: 16),
+                const BottomSheetTitle(),
+                const SizedBox(height: 20),
 
-          const SizedBox(height: 20),
-          CurrentLocationTile(
-            isDetecting: isDetecting,
-            onTap: widget.onUseCurrentLocation,
-          ),
+                // =================================================
+                // 🔄 FETCHING LOCATION (AUTO / MANUAL)
+                // =================================================
+                if (LocationState.isDetecting)
+                  const LocationFetchingTile()
 
-          const SizedBox(height: 24),
-          const SectionTitle(text: 'Saved addresses'),
-          const SizedBox(height: 12),
+                // =================================================
+                // 🔴 LOCATION OFF → ONLY ENABLE BUTTON
+                // =================================================
+                else if (!_locationServiceOn)
+                  LocationPermissionOffTile(
+                    onEnable: widget.onUseCurrentLocation,
+                  )
 
-          // ---------------- SAVED ADDRESSES ----------------
-          Expanded(
-            child: SavedAddressList(
-              future: _future,
-              onSelect: widget.onSelectSavedAddress,
-            ),
-          ),
-
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-
-          // ---------------- ADD NEW ADDRESS ----------------
-          InkWell(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AddAddressScreen(),
-                ),
-              );
-
-              // Refresh after returning
-              setState(_reload);
-            },
-            borderRadius: BorderRadius.circular(12),
-            child: Row(
-              children: const [
-                Icon(Icons.add, color: Colors.green),
-                SizedBox(width: 8),
-                Text(
-                  'Add new address',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green,
+                // =================================================
+                // 🟢 LOCATION ON → FULL UI
+                // =================================================
+                else ...[
+                  CurrentLocationTile(
+                    isDetecting: false,
+                    onTap: widget.onUseCurrentLocation,
                   ),
-                ),
+
+                  const SizedBox(height: 24),
+                  const SectionTitle(text: 'Saved addresses'),
+                  const SizedBox(height: 12),
+
+                  SavedAddressList(
+                    future: _future,
+                    onSelect: widget.onSelectSavedAddress,
+                  ),
+
+                  const Spacer(),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+
+                  // SEARCH MANUALLY
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AddAddressScreen(),
+                          ),
+                        );
+
+                        setState(() {
+                          _future =
+                              SavedAddressStorage.getAll();
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.search,
+                              color: Colors.green),
+                          SizedBox(width: 8),
+                          Text(
+                            'Search manually',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
+  }
+}
+
+/// --------------------------------------------------
+/// Listenable to rebuild when LocationState.isDetecting changes
+/// --------------------------------------------------
+class LocationDetectingListenable extends ChangeNotifier {
+  LocationDetectingListenable() {
+    _tick();
+  }
+
+  void _tick() async {
+    bool last = LocationState.isDetecting;
+
+    while (true) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (LocationState.isDetecting != last) {
+        last = LocationState.isDetecting;
+        notifyListeners();
+      }
+    }
   }
 }

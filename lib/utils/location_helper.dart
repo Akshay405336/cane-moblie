@@ -19,19 +19,16 @@ class LocationHelper {
       return false;
     }
 
-    final serviceEnabled =
-        await Geolocator.isLocationServiceEnabled();
-
-    return serviceEnabled;
+    return Geolocator.isLocationServiceEnabled();
   }
 
   // ===============================================================
-  // USER-TRIGGERED FLOW (BUTTON CLICK ONLY)
-  // ✅ Can open permission dialog
-  // ✅ Can open settings
+  // USER-TRIGGERED PERMISSION FLOW (BUTTON CLICK ONLY)
+  // ✅ Permission dialog allowed
+  // ❌ NO GPS FETCH
   // ===============================================================
 
-  static Future<bool> requestLocationAccessFromUser() async {
+  static Future<bool> requestPermissionFromUser() async {
     LocationPermission permission =
         await Geolocator.checkPermission();
 
@@ -39,20 +36,8 @@ class LocationHelper {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      await Geolocator.openAppSettings();
-      return false;
-    }
-
-    if (permission == LocationPermission.denied) {
-      return false;
-    }
-
-    final serviceEnabled =
-        await Geolocator.isLocationServiceEnabled();
-
-    if (!serviceEnabled) {
-      await Geolocator.openLocationSettings();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       return false;
     }
 
@@ -60,12 +45,38 @@ class LocationHelper {
   }
 
   // ===============================================================
+  // USER-TRIGGERED SERVICE ENABLE FLOW
+  // ✅ Opens system location settings
+  // ===============================================================
+
+  static Future<bool> ensureLocationServiceEnabled() async {
+    final enabled = await Geolocator.isLocationServiceEnabled();
+
+    if (enabled) return true;
+
+    await Geolocator.openLocationSettings();
+
+    // Re-check after returning from settings
+    return Geolocator.isLocationServiceEnabled();
+  }
+
+  // ===============================================================
   // FETCH CURRENT ADDRESS
-  // 🚨 CALL ONLY AFTER USER CLICK
+  // 🚨 CALL ONLY AFTER USER CLICK + PERMISSION + SERVICE OK
   // ===============================================================
 
   static Future<String> fetchCurrentAddress() async {
     try {
+      final permission = await Geolocator.checkPermission();
+      final serviceEnabled =
+          await Geolocator.isLocationServiceEnabled();
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever ||
+          !serviceEnabled) {
+        return '';
+      }
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
         timeLimit: const Duration(seconds: 10),
@@ -85,8 +96,8 @@ class LocationHelper {
         place.locality,
         place.administrativeArea,
       ]
-          .where((e) => e != null && e!.isNotEmpty)
-          .map((e) => e!)
+          .whereType<String>()
+          .where((e) => e.isNotEmpty)
           .join(', ');
     } catch (_) {
       // 🔐 Never crash location flow
@@ -95,7 +106,7 @@ class LocationHelper {
   }
 
   // ===============================================================
-  // SIMPLE GPS TOGGLE CHECK (UI USE ONLY)
+  // SIMPLE GPS SERVICE CHECK (UI ONLY)
   // ===============================================================
 
   static Future<bool> isGpsEnabled() async {

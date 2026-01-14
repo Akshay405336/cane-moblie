@@ -24,20 +24,21 @@ class SavedAddress {
   SavedAddress copyWith({
     String? label,
     String? address,
+    SavedAddressType? type,
   }) {
     return SavedAddress(
       id: id,
-      type: type,
+      type: type ?? this.type,
       label: label ?? this.label,
       address: address ?? this.address,
     );
   }
 
   // ------------------------------
-  // UI HELPER (OPTIONAL)
+  // UI HELPERS
   // ------------------------------
 
-  /// Useful for highlighting selected address in UI
+  /// Highlight selected saved address
   bool isActive(String? activeSavedAddressId) {
     return activeSavedAddressId != null &&
         activeSavedAddressId == id;
@@ -55,13 +56,31 @@ class SavedAddress {
       };
 
   factory SavedAddress.fromJson(Map<String, dynamic> json) {
+    final typeString = json['type'];
+
+    final resolvedType = SavedAddressType.values.firstWhere(
+      (e) => e.name == typeString,
+      orElse: () => SavedAddressType.other,
+    );
+
     return SavedAddress(
-      id: json['id'],
-      type: SavedAddressType.values.firstWhere(
-        (e) => e.name == json['type'],
-      ),
-      label: json['label'],
-      address: json['address'],
+      id: json['id']?.toString() ?? '',
+      type: resolvedType,
+      label: json['label']?.toString() ?? '',
+      address: json['address']?.toString() ?? '',
     );
   }
+
+  // ------------------------------
+  // EQUALITY (IMPORTANT FOR UI)
+  // ------------------------------
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SavedAddress && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }

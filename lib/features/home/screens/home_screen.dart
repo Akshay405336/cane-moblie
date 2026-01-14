@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../models/category.model.dart';
+import '../models/product.model.dart';
+
 import '../services/category_socket_service.dart';
+import '../services/product_socket_service.dart';
+
 import '../widgets/category_list.widget.dart';
 import '../widgets/category_shimmer.widget.dart';
+
+import '../widgets/product_grid_widget.dart';
+import '../widgets/product_shimmer.widget.dart';
+
 import 'categories.screen.dart';
+import 'products.screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -14,86 +23,113 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /* ================= CATEGORIES ================= */
+
   List<Category> _categories = [];
   bool _loadingCategories = true;
+
+  /* ================= PRODUCTS ================= */
+
+  List<Product> _products = [];
+  bool _loadingProducts = true;
 
   @override
   void initState() {
     super.initState();
 
-    // 🔥 SUBSCRIBE FIRST
-    CategorySocketService.subscribe(_onCategories);
+    /* ---------- CATEGORIES ---------- */
 
-    // 🔌 ENSURE SOCKET IS CONNECTED
+    final cachedCategories =
+        CategorySocketService.cachedCategories;
+
+    if (cachedCategories.isNotEmpty) {
+      _categories = cachedCategories;
+      _loadingCategories = false;
+    }
+
+    CategorySocketService.subscribe(_onCategories);
     CategorySocketService.connect();
 
-    // 🛟 SAFETY TIMEOUT (prevents infinite shimmer)
-    Future.delayed(const Duration(seconds: 10), () {
-      if (!mounted) return;
-      if (_loadingCategories) {
-        setState(() {
-          _loadingCategories = false;
-        });
-      }
-    });
+    /* ---------- PRODUCTS ---------- */
+
+    final cachedProducts =
+        ProductSocketService.cachedProducts;
+
+    if (cachedProducts.isNotEmpty) {
+      _products = cachedProducts;
+      _loadingProducts = false;
+    }
+
+    ProductSocketService.subscribe(_onProducts);
+    ProductSocketService.connect();
   }
 
   @override
   void dispose() {
-    // 🟢 ONLY unsubscribe (do NOT disconnect globally)
     CategorySocketService.unsubscribe(_onCategories);
+    ProductSocketService.unsubscribe(_onProducts);
     super.dispose();
   }
 
-  /* -------------------------------------------------- */
-  /* SOCKET HANDLER                                     */
-  /* -------------------------------------------------- */
+  /* ================= SOCKET HANDLERS ================= */
 
   void _onCategories(List<Category> categories) {
     if (!mounted) return;
-
     setState(() {
       _categories = categories;
       _loadingCategories = false;
     });
   }
 
+  void _onProducts(List<Product> products) {
+    if (!mounted) return;
+    setState(() {
+      _products = products;
+      _loadingProducts = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🌱 HERO BANNER
-          _heroBanner(),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
 
-          const SizedBox(height: 20),
+            /* ================= CATEGORIES ================= */
 
-          // 🍹 CATEGORIES
-          _categoryHeader(context),
-          _categorySection(),
-        ],
+            _categoryHeader(context),
+            _categorySection(),
+
+            const SizedBox(height: 24),
+
+            /* ================= PRODUCTS ================= */
+
+            _productHeader(context),
+            _productSection(),
+          ],
+        ),
       ),
     );
   }
 
-  /* -------------------------------------------------- */
-  /* CATEGORY SECTION                                   */
-  /* -------------------------------------------------- */
+  /* ================= CATEGORY UI ================= */
 
   Widget _categoryHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
         children: [
           const Text(
-            'Fresh Categories',
+            'Categories',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1B5E20),
             ),
           ),
           TextButton(
@@ -101,17 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const CategoriesScreen(),
+                  builder: (_) =>
+                      const CategoriesScreen(),
                 ),
               );
             },
-            child: const Text(
-              'View all',
-              style: TextStyle(
-                color: Color(0xFF43A047),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: const Text('View all'),
           ),
         ],
       ),
@@ -133,61 +164,57 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return CategoryListWidget(
-      categories: _categories,
-    );
+    return CategoryListWidget(categories: _categories);
   }
 
-  /* -------------------------------------------------- */
-  /* HERO BANNER                                        */
-  /* -------------------------------------------------- */
+  /* ================= PRODUCT UI ================= */
 
-  Widget _heroBanner() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF66BB6A),
-            Color(0xFF43A047),
-          ],
-        ),
-      ),
+  Widget _productHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween,
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Fresh. Natural.\nCold Pressed.',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Pure sugarcane & fruit juices\nserved fresh everyday 🌱',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
+          const Text(
+            'Fresh Products',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.local_drink,
-            size: 60,
-            color: Colors.white,
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const ProductsScreen(),
+                ),
+              );
+            },
+            child: const Text('View all'),
           ),
         ],
       ),
     );
+  }
+
+  Widget _productSection() {
+    if (_loadingProducts) {
+      return const ProductShimmerWidget();
+    }
+
+    if (_products.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Text(
+          'No products available',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    return ProductGridWidget(products: _products);
   }
 }

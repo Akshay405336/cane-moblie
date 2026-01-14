@@ -14,35 +14,48 @@ class SavedAddressStorage {
   // --------------------------------------------------
 
   static Future<List<SavedAddress>> getAll() async {
-    // 👤 Guest → no backend
+    // 👤 Guest → LOCAL ONLY (never touch backend)
     if (!AuthState.isAuthenticated) {
       return _getLocal();
     }
 
-    // 🔄 Fetch from backend
-    final remote = await SavedAddressApi.getAll();
+    try {
+      final remote = await SavedAddressApi.getAll();
 
-    final list = remote.map((e) {
-      return SavedAddress(
-        id: e['id'],
-        type: SavedAddressType.values.firstWhere(
-          (t) => t.name.toUpperCase() == e['type'],
-        ),
-        label: e['label'],
-        address: e['addressText'],
-      );
-    }).toList();
+      final list = remote.map<SavedAddress>((e) {
+        final typeString =
+            e['type']?.toString().toLowerCase();
 
-    // 💾 Cache locally
-    await _persist(list);
-    return list;
+        final resolvedType =
+            SavedAddressType.values.firstWhere(
+          (t) => t.name == typeString,
+          orElse: () => SavedAddressType.other,
+        );
+
+        return SavedAddress(
+          id: e['id']?.toString() ?? '',
+          type: resolvedType,
+          label: e['label']?.toString() ?? '',
+          address: e['addressText']?.toString() ?? '',
+        );
+      }).where((a) => a.id.isNotEmpty).toList();
+
+      // 💾 Cache backend result
+      await _persist(list);
+      return list;
+    } catch (_) {
+      // 🔐 Backend failed → fallback to local cache
+      return _getLocal();
+    }
   }
 
   // --------------------------------------------------
-  // SAVE / UPSERT
+  // CREATE
   // --------------------------------------------------
 
   static Future<void> save(SavedAddress address) async {
+    if (!AuthState.isAuthenticated) return;
+
     final data = await SavedAddressApi.create(
       type: address.type.name,
       label: address.label,
@@ -52,14 +65,17 @@ class SavedAddressStorage {
     if (data == null) return;
 
     final saved = SavedAddress(
-      id: data['id'],
+      id: data['id']?.toString() ?? '',
       type: address.type,
       label: address.label,
       address: address.address,
     );
 
+    if (saved.id.isEmpty) return;
+
     final list = await _getLocal();
 
+    // 🔐 Only one HOME / WORK allowed
     if (saved.type != SavedAddressType.other) {
       list.removeWhere((a) => a.type == saved.type);
     }
@@ -73,27 +89,32 @@ class SavedAddressStorage {
   // --------------------------------------------------
 
   static Future<void> update(SavedAddress updated) async {
-    final data = await SavedAddressApi.update(
-      id: updated.id,
-      addressText: updated.address,
-    );
+  if (!AuthState.isAuthenticated) return;
 
-    if (data == null) return;
+  final data = await SavedAddressApi.update(
+    id: updated.id,
+    addressText: updated.address,
+  );
 
-    final list = await _getLocal();
-    final index =
-        list.indexWhere((a) => a.id == updated.id);
-    if (index == -1) return;
+  // ✅ update() returns Map<String, dynamic>?
+  if (data == null) return;
 
-    list[index] = updated;
-    await _persist(list);
-  }
+  final list = await _getLocal();
+  final index = list.indexWhere((a) => a.id == updated.id);
+  if (index == -1) return;
+
+  list[index] = updated;
+  await _persist(list);
+}
+
 
   // --------------------------------------------------
   // DELETE
   // --------------------------------------------------
 
   static Future<void> delete(String id) async {
+    if (!AuthState.isAuthenticated) return;
+
     final success = await SavedAddressApi.delete(id);
     if (!success) return;
 
@@ -101,8 +122,9 @@ class SavedAddressStorage {
     list.removeWhere((a) => a.id == id);
     await _persist(list);
 
+    // ⚠️ If deleted address was active → clear ONLY saved source
     if (LocationState.activeSavedAddressId == id) {
-      await LocationState.clearSavedAddress();
+      await LocationState.removeActiveSavedAddress();
     }
   }
 
@@ -114,21 +136,32 @@ class SavedAddressStorage {
     final raw = await SecureStorage.read(_key);
     if (raw == null || raw.isEmpty) return [];
 
-    final List decoded = jsonDecode(raw);
-    return decoded
-        .map((e) => SavedAddress.fromJson(e))
-        .toList();
+    try {
+      final List decoded = jsonDecode(raw);
+      return decoded
+          .map((e) => SavedAddress.fromJson(e))
+          .toList();
+    } catch (_) {
+      // 🔐 Corrupted cache → reset
+      await SecureStorage.delete(_key);
+      return [];
+    }
   }
 
   static Future<void> _persist(
     List<SavedAddress> list,
   ) async {
-    final encoded =
-        jsonEncode(list.map((e) => e.toJson()).toList());
+    final encoded = jsonEncode(
+      list.map((e) => e.toJson()).toList(),
+    );
     await SecureStorage.write(_key, encoded);
   }
 
-  static Future<void> clear() async {
+  // --------------------------------------------------
+  // CLEAR (DEBUG / FULL RESET ONLY)
+  // --------------------------------------------------
+
+  static Future<void> clearAll() async {
     await SecureStorage.delete(_key);
   }
 }

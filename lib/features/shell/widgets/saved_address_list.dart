@@ -34,6 +34,31 @@ class SavedAddressList extends StatelessWidget {
     return FutureBuilder<List<SavedAddress>>(
       future: future,
       builder: (context, snapshot) {
+        // LOADING
+        if (snapshot.connectionState ==
+            ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
+
+        // ERROR
+        if (snapshot.hasError) {
+          return const Padding(
+            padding: EdgeInsets.only(top: 16),
+            child: Text(
+              'Unable to load saved addresses',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+              ),
+            ),
+          );
+        }
+
         final list = snapshot.data ?? [];
 
         // EMPTY
@@ -43,6 +68,8 @@ class SavedAddressList extends StatelessWidget {
 
         // LIST
         return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           itemCount: list.length,
           separatorBuilder: (_, __) =>
               const SizedBox(height: 8),
@@ -93,7 +120,7 @@ class _GuestFallback extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Login to add and manage your saved addresses',
+          'Login to view your saved addresses',
           style: TextStyle(
             fontSize: 13,
             color: Colors.grey,

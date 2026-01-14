@@ -20,9 +20,15 @@ class AppLayout extends StatefulWidget {
   State<AppLayout> createState() => _AppLayoutState();
 }
 
-class _AppLayoutState extends State<AppLayout> {
+class _AppLayoutState extends State<AppLayout>
+    with WidgetsBindingObserver {
   int _currentIndex = 0;
+
   bool _sheetOpen = false;
+  bool _checkedOnce = false;
+
+  /// 🔐 NEW: tracks settings → resume auto-fetch
+  bool _waitingForLocationEnable = false;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -32,77 +38,135 @@ class _AppLayoutState extends State<AppLayout> {
     ExplorePage(),
   ];
 
+  // ===============================================================
+  // INIT
+  // ===============================================================
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LocationState.load();
-
-      // 🔐 DO NOTHING ELSE
-      // ❌ No GPS
-      // ❌ No permission check
-      // ❌ No auto bottom sheet
-      setState(() {});
+      await _enforceLocation();
+      _checkedOnce = true;
+      if (mounted) setState(() {});
     });
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   // ===============================================================
-  // USER-TRIGGERED GPS FLOW ONLY
+  // APP RESUME
+  // ===============================================================
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state != AppLifecycleState.resumed) return;
+
+    // 🔥 AUTO-FETCH after user enabled location
+    if (_waitingForLocationEnable) {
+      _waitingForLocationEnable = false;
+      await _fetchAndSetLocation();
+      return;
+    }
+
+    await _enforceLocation();
+  }
+
+  // ===============================================================
+  // HARD LOCATION ENFORCEMENT
+  // ===============================================================
+
+  Future<void> _enforceLocation() async {
+    if (!mounted || _sheetOpen) return;
+
+    final hasService =
+        await LocationHelper.canUseLocationSilently();
+
+    final hasLocation = LocationState.hasPersistedLocation;
+
+    if (!hasService || !hasLocation) {
+      _openLocationSheet(force: true);
+    }
+  }
+
+  // ===============================================================
+  // BUTTON: USE CURRENT LOCATION
   // ===============================================================
 
   Future<void> _useCurrentLocation() async {
-    LocationState.startDetecting();
-    setState(() {});
+    final hasPermission =
+        await LocationHelper.requestPermissionFromUser();
 
-    final ready =
-        await LocationHelper.requestLocationAccessFromUser();
-
-    if (!ready) {
+    if (!hasPermission) {
       LocationState.setError('Location permission required');
       setState(() {});
       return;
     }
 
-    try {
-      final address =
-          await LocationHelper.fetchCurrentAddress();
+    final serviceEnabled =
+        await LocationHelper.ensureLocationServiceEnabled();
 
-      if (address.isEmpty) {
-        LocationState.setError('Unable to detect location');
-        setState(() {});
-        return;
-      }
-
-      await LocationState.setGpsAddress(address);
-
-      if (_sheetOpen && mounted) {
-        Navigator.pop(context);
-      }
-
-      setState(() {});
-    } catch (_) {
-      LocationState.setError('Unable to detect location');
-      setState(() {});
+    // 🔐 User is going to settings → wait & auto-fetch
+    if (!serviceEnabled) {
+      _waitingForLocationEnable = true;
+      return;
     }
+
+    // Service already ON → fetch immediately
+    await _fetchAndSetLocation();
+  }
+
+  // ===============================================================
+  // FETCH + STORE LOCATION (ONE PLACE ONLY)
+  // ===============================================================
+
+  Future<void> _fetchAndSetLocation() async {
+    LocationState.startDetecting();
+    if (mounted) setState(() {});
+
+    final address =
+        await LocationHelper.fetchCurrentAddress();
+
+    if (address.isEmpty) {
+      LocationState.setError('Unable to detect location');
+      if (mounted) setState(() {});
+      return;
+    }
+
+    await LocationState.setGpsAddress(address);
+
+    if (_sheetOpen && mounted) {
+      Navigator.pop(context);
+    }
+
+    if (mounted) setState(() {});
   }
 
   // ===============================================================
   // OPEN LOCATION SHEET
   // ===============================================================
 
-  void _openLocationSheet() {
+  void _openLocationSheet({bool force = false}) {
     if (_sheetOpen || !mounted) return;
 
     _sheetOpen = true;
 
     showModalBottomSheet(
       context: context,
-      isDismissible: true,
-      enableDrag: true,
+      isDismissible: !force ? true : false,
+      enableDrag: !force ? true : false,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(18)),
       ),
       builder: (_) {
         return LocationBottomSheet(
@@ -124,8 +188,9 @@ class _AppLayoutState extends State<AppLayout> {
           },
         );
       },
-    ).then((_) {
+    ).whenComplete(() async {
       _sheetOpen = false;
+      if (mounted) await _enforceLocation();
     });
   }
 
@@ -135,10 +200,17 @@ class _AppLayoutState extends State<AppLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // ⏳ Wait for first location check
+    if (!_checkedOnce) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppHeader(
         onAuthChanged: () => setState(() {}),
-        onLocationTap: _openLocationSheet,
+        onLocationTap: () => _openLocationSheet(),
       ),
       body: IndexedStack(
         index: _currentIndex,
