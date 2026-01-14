@@ -27,8 +27,11 @@ class _AppLayoutState extends State<AppLayout>
   bool _sheetOpen = false;
   bool _checkedOnce = false;
 
-  /// 🔐 NEW: tracks settings → resume auto-fetch
+  /// 🔐 Tracks waiting for user to enable location service
   bool _waitingForLocationEnable = false;
+
+  /// ✅ NEW: skip enforcement once after "Maybe later"
+  bool _skipNextEnforcement = false;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -69,7 +72,7 @@ class _AppLayoutState extends State<AppLayout>
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state != AppLifecycleState.resumed) return;
 
-    // 🔥 AUTO-FETCH after user enabled location
+    // 🔥 Auto-fetch after user enabled location in settings
     if (_waitingForLocationEnable) {
       _waitingForLocationEnable = false;
       await _fetchAndSetLocation();
@@ -88,7 +91,6 @@ class _AppLayoutState extends State<AppLayout>
 
     final hasService =
         await LocationHelper.canUseLocationSilently();
-
     final hasLocation = LocationState.hasPersistedLocation;
 
     if (!hasService || !hasLocation) {
@@ -106,7 +108,7 @@ class _AppLayoutState extends State<AppLayout>
 
     if (!hasPermission) {
       LocationState.setError('Location permission required');
-      setState(() {});
+      if (mounted) setState(() {});
       return;
     }
 
@@ -119,12 +121,11 @@ class _AppLayoutState extends State<AppLayout>
       return;
     }
 
-    // Service already ON → fetch immediately
     await _fetchAndSetLocation();
   }
 
   // ===============================================================
-  // FETCH + STORE LOCATION (ONE PLACE ONLY)
+  // FETCH + STORE LOCATION
   // ===============================================================
 
   Future<void> _fetchAndSetLocation() async {
@@ -160,8 +161,8 @@ class _AppLayoutState extends State<AppLayout>
 
     showModalBottomSheet(
       context: context,
-      isDismissible: !force ? true : false,
-      enableDrag: !force ? true : false,
+      isDismissible: !force,
+      enableDrag: !force,
       isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
@@ -171,6 +172,8 @@ class _AppLayoutState extends State<AppLayout>
       builder: (_) {
         return LocationBottomSheet(
           onUseCurrentLocation: _useCurrentLocation,
+
+          /// ✅ SAVED ADDRESS SELECT
           onSelectSavedAddress: ({
             required String id,
             required String address,
@@ -190,6 +193,13 @@ class _AppLayoutState extends State<AppLayout>
       },
     ).whenComplete(() async {
       _sheetOpen = false;
+
+      /// 🔑 Skip enforcement once after "Maybe later"
+      if (_skipNextEnforcement) {
+        _skipNextEnforcement = false;
+        return;
+      }
+
       if (mounted) await _enforceLocation();
     });
   }

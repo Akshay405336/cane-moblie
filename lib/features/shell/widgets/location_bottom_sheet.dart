@@ -26,8 +26,7 @@ class LocationBottomSheet extends StatefulWidget {
       _LocationBottomSheetState();
 }
 
-class _LocationBottomSheetState
-    extends State<LocationBottomSheet> {
+class _LocationBottomSheetState extends State<LocationBottomSheet> {
   late Future<List<SavedAddress>> _future;
   bool _locationServiceOn = true;
 
@@ -54,7 +53,7 @@ class _LocationBottomSheetState
         height: height * 0.6,
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         decoration: const BoxDecoration(
-          color: Color(0xFFF9FFF8),
+          color: Colors.white,
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(24)),
         ),
@@ -65,27 +64,29 @@ class _LocationBottomSheetState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const BottomSheetHandle(),
-                const SizedBox(height: 16),
-                const BottomSheetTitle(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                // =================================================
-                // 🔄 FETCHING LOCATION (AUTO / MANUAL)
-                // =================================================
+                // =============================================
+                // 🔄 FETCHING LOCATION
+                // =============================================
                 if (LocationState.isDetecting)
                   const LocationFetchingTile()
 
-                // =================================================
-                // 🔴 LOCATION OFF → ONLY ENABLE BUTTON
-                // =================================================
+                // =============================================
+                // 🔴 LOCATION PERMISSION OFF (CENTERED)
+                // =============================================
                 else if (!_locationServiceOn)
-                  LocationPermissionOffTile(
-                    onEnable: widget.onUseCurrentLocation,
+                  Expanded(
+                    child: Center(
+                      child: LocationPermissionOffTile(
+                        onEnable: widget.onUseCurrentLocation,
+                      ),
+                    ),
                   )
 
-                // =================================================
-                // 🟢 LOCATION ON → FULL UI
-                // =================================================
+                // =============================================
+                // 🟢 LOCATION ON → NORMAL FLOW
+                // =============================================
                 else ...[
                   CurrentLocationTile(
                     isDetecting: false,
@@ -105,39 +106,36 @@ class _LocationBottomSheetState
                   const Divider(height: 1),
                   const SizedBox(height: 12),
 
-                  // SEARCH MANUALLY
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const AddAddressScreen(),
+                  /// SEARCH MANUALLY
+                  InkWell(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const AddAddressScreen(),
+                        ),
+                      );
+                      setState(() {
+                        _future =
+                            SavedAddressStorage.getAll();
+                      });
+                    },
+                    child: Row(
+                      children: const [
+                        Icon(
+                          Icons.search,
+                          color: Color(0xFF03B602),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Search manually',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF03B602),
                           ),
-                        );
-
-                        setState(() {
-                          _future =
-                              SavedAddressStorage.getAll();
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.search,
-                              color: Colors.green),
-                          SizedBox(width: 8),
-                          Text(
-                            'Search manually',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -151,7 +149,7 @@ class _LocationBottomSheetState
 }
 
 /// --------------------------------------------------
-/// Listenable to rebuild when LocationState.isDetecting changes
+/// LISTENABLE
 /// --------------------------------------------------
 class LocationDetectingListenable extends ChangeNotifier {
   LocationDetectingListenable() {
@@ -160,7 +158,6 @@ class LocationDetectingListenable extends ChangeNotifier {
 
   void _tick() async {
     bool last = LocationState.isDetecting;
-
     while (true) {
       await Future.delayed(const Duration(milliseconds: 200));
       if (LocationState.isDetecting != last) {

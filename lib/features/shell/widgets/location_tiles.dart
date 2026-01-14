@@ -15,7 +15,7 @@ class BottomSheetHandle extends StatelessWidget {
         width: 44,
         height: 4,
         decoration: BoxDecoration(
-          color: Colors.green.shade300,
+          color: Colors.grey.shade300,
           borderRadius: BorderRadius.circular(4),
         ),
       ),
@@ -24,24 +24,8 @@ class BottomSheetHandle extends StatelessWidget {
 }
 
 /// =====================================================
-/// TITLES
+/// SECTION TITLE
 /// =====================================================
-class BottomSheetTitle extends StatelessWidget {
-  const BottomSheetTitle({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'Select delivery address',
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF1B5E20),
-      ),
-    );
-  }
-}
-
 class SectionTitle extends StatelessWidget {
   final String text;
   const SectionTitle({super.key, required this.text});
@@ -53,14 +37,14 @@ class SectionTitle extends StatelessWidget {
       style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF689F38),
+        color: Colors.grey,
       ),
     );
   }
 }
 
 /// =====================================================
-/// LOCATION PERMISSION OFF (ONLY ONE BUTTON)
+/// LOCATION PERMISSION OFF (CENTERED + BIGGER)
 /// =====================================================
 class LocationPermissionOffTile extends StatelessWidget {
   final VoidCallback onEnable;
@@ -70,47 +54,110 @@ class LocationPermissionOffTile extends StatelessWidget {
     required this.onEnable,
   });
 
+  static const Color green = Color(0xFF03B602);
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F8E9),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            'Location permission is off',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1B5E20),
+          /// LOCATION ICON
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: green.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.location_off_rounded,
+              size: 36,
+              color: green,
             ),
           ),
-          const SizedBox(height: 6),
+
+          const SizedBox(height: 20),
+
+          /// TITLE
           const Text(
-            'Enable location to use nearby services',
+            'Location permission is off',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: green,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          /// DESCRIPTION
+          const Text(
+            'Turn on precise location to get accurate delivery address, nearby stores and faster service.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.45,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 28),
+
+          /// ENABLE LOCATION BUTTON (NO SHADOW)
           SizedBox(
             width: double.infinity,
+            height: 52,
             child: ElevatedButton(
+              onPressed: onEnable,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: green,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              onPressed: onEnable,
               child: const Text(
                 'Enable location',
-                style: TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          /// MAYBE LATER (ONLY SHADOW HERE)
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Maybe later',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
               ),
             ),
           ),
@@ -121,7 +168,7 @@ class LocationPermissionOffTile extends StatelessWidget {
 }
 
 /// =====================================================
-/// FETCHING LOCATION (AUTO / MANUAL)
+/// FETCHING LOCATION
 /// =====================================================
 class LocationFetchingTile extends StatelessWidget {
   const LocationFetchingTile({super.key});
@@ -129,10 +176,10 @@ class LocationFetchingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,21 +187,20 @@ class LocationFetchingTile extends StatelessWidget {
           const Text(
             'Detecting your location',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF1B5E20),
+              color: Color(0xFF03B602),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           const Text(
-            'Please wait while we fetch your current location',
+            'Please wait while we find your current location',
             style: TextStyle(fontSize: 13, color: Colors.grey),
           ),
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 18),
           Shimmer.fromColors(
-            baseColor: Colors.green.shade200,
-            highlightColor: Colors.green.shade50,
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
             child: Container(
               height: 14,
               width: double.infinity,
@@ -164,19 +210,6 @@ class LocationFetchingTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          Shimmer.fromColors(
-            baseColor: Colors.green.shade200,
-            highlightColor: Colors.green.shade50,
-            child: Container(
-              height: 14,
-              width: MediaQuery.of(context).size.width * 0.6,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -184,7 +217,7 @@ class LocationFetchingTile extends StatelessWidget {
 }
 
 /// =====================================================
-/// CURRENT LOCATION (ONLY WHEN NOT FETCHING)
+/// CURRENT LOCATION
 /// =====================================================
 class CurrentLocationTile extends StatelessWidget {
   final bool isDetecting;
@@ -199,7 +232,7 @@ class CurrentLocationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFE8F5E9),
+      color: Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: isDetecting ? null : onTap,
@@ -207,26 +240,16 @@ class CurrentLocationTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
-            children: [
-              const Icon(Icons.my_location,
-                  color: Color(0xFF2E7D32)),
-              const SizedBox(width: 14),
-              const Expanded(
+            children: const [
+              Icon(Icons.my_location, color: Color(0xFF03B602)),
+              SizedBox(width: 14),
+              Expanded(
                 child: Text(
                   'Use current location',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1B5E20),
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              isDetecting
-                  ? Shimmer.fromColors(
-                      baseColor: Colors.grey.shade300,
-                      highlightColor: Colors.grey.shade100,
-                      child: const CircleAvatar(radius: 10),
-                    )
-                  : const Icon(Icons.chevron_right),
+              Icon(Icons.chevron_right),
             ],
           ),
         ),
@@ -256,29 +279,22 @@ class AddressTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isActive
-          ? Colors.green.withOpacity(0.08)
-          : Colors.transparent,
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(
-          icon,
-          color: isActive ? Colors.green : Colors.grey,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight:
-                isActive ? FontWeight.w700 : FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(subtitle),
-        trailing: isActive
-            ? const Icon(Icons.check_circle,
-                color: Colors.green)
-            : const Icon(Icons.chevron_right),
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(
+        icon,
+        color: isActive ? const Color(0xFF03B602) : Colors.grey,
       ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(subtitle),
+      trailing: isActive
+          ? const Icon(Icons.check_circle, color: Color(0xFF03B602))
+          : const Icon(Icons.chevron_right),
     );
   }
 }
@@ -297,9 +313,6 @@ IconData iconForType(SavedAddressType type) {
   }
 }
 
-/// =====================================================
-/// EMPTY
-/// =====================================================
 class EmptySavedAddress extends StatelessWidget {
   const EmptySavedAddress({super.key});
 
