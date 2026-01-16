@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../routes.dart';
 import '../../../utils/auth_state.dart';
 import '../../../utils/location_state.dart';
 import '../../../utils/saved_address.dart';
@@ -22,21 +21,20 @@ class SavedAddressList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // --------------------------------------------------
-    // GUEST FALLBACK
+    // 🔐 NOT LOGGED IN → SHOW NOTHING
     // --------------------------------------------------
     if (!AuthState.isAuthenticated) {
-      return const _GuestFallback();
+      return const SizedBox.shrink();
     }
 
     // --------------------------------------------------
-    // LOGGED-IN FLOW (DISPLAY ONLY)
+    // LOGGED-IN FLOW
     // --------------------------------------------------
     return FutureBuilder<List<SavedAddress>>(
       future: future,
       builder: (context, snapshot) {
         // LOADING
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(
@@ -71,15 +69,13 @@ class SavedAddressList extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: list.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: 8),
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (_, index) {
             final address = list[index];
 
             final isActive =
                 LocationState.isSavedAddress &&
-                LocationState.activeSavedAddressId ==
-                    address.id;
+                LocationState.activeSavedAddressId == address.id;
 
             return AddressTile(
               icon: iconForType(address.type),
@@ -96,47 +92,6 @@ class SavedAddressList extends StatelessWidget {
           },
         );
       },
-    );
-  }
-}
-
-// =====================================================
-// GUEST UI
-// =====================================================
-
-class _GuestFallback extends StatelessWidget {
-  const _GuestFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        const Text(
-          'Save addresses for faster checkout',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Login to view your saved addresses',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.login,
-            );
-          },
-          child: const Text('Login'),
-        ),
-      ],
     );
   }
 }

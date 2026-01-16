@@ -21,12 +21,16 @@ class AppHeader extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: LocationHeaderListenable(),
-      builder: (context, _) {
+    /// 🔐 SAFETY NET
+    /// Ensures header is never stale
+    LocationHeaderController.instance.sync();
+
+    return ValueListenableBuilder<LocationHeaderState>(
+      valueListenable: LocationHeaderController.instance,
+      builder: (context, state, _) {
         final isLoggedIn = AuthState.isAuthenticated;
-        final isDetecting = LocationState.isDetecting;
-        final hasLocation = LocationState.hasPersistedLocation;
+        final isDetecting = state.isDetecting;
+        final hasLocation = state.hasLocation;
 
         return AppBar(
           elevation: 0,
@@ -44,18 +48,15 @@ class AppHeader extends StatelessWidget
             ),
           ),
 
-          // 📍 LOCATION (DISPLAY ONLY)
+          // 📍 LOCATION
           title: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: (!isDetecting && hasLocation)
-                ? onLocationTap
-                : null,
+            onTap:
+                (!isDetecting && hasLocation) ? onLocationTap : null,
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Delivering to',
@@ -77,8 +78,8 @@ class AppHeader extends StatelessWidget
                       const SizedBox(width: 6),
                       Flexible(
                         child: AnimatedSwitcher(
-                          duration: const Duration(
-                              milliseconds: 250),
+                          duration:
+                              const Duration(milliseconds: 250),
                           child: isDetecting
                               ? _locationShimmer()
                               : Text(
@@ -130,10 +131,7 @@ class AppHeader extends StatelessWidget
                     context,
                     AppRoutes.login,
                   );
-
-                  if (result == true) {
-                    onAuthChanged();
-                  }
+                  if (result == true) onAuthChanged();
                   return;
                 }
 
@@ -149,9 +147,9 @@ class AppHeader extends StatelessWidget
     );
   }
 
-  // ------------------------------------------------------------------
+  // --------------------------------------------------
   // SHIMMER
-  // ------------------------------------------------------------------
+  // --------------------------------------------------
 
   Widget _locationShimmer() {
     return Shimmer.fromColors(
@@ -169,29 +167,40 @@ class AppHeader extends StatelessWidget
   }
 }
 
-/// --------------------------------------------------
-/// Lightweight listenable for header refresh
-/// --------------------------------------------------
-class LocationHeaderListenable extends ChangeNotifier {
-  LocationHeaderListenable() {
-    _tick();
-  }
+/// ==================================================
+/// HEADER STATE (IMMUTABLE)
+/// ==================================================
+class LocationHeaderState {
+  final bool isDetecting;
+  final bool hasLocation;
 
-  void _tick() async {
-    bool lastDetecting = LocationState.isDetecting;
-    String lastAddress = LocationState.address;
+  const LocationHeaderState({
+    required this.isDetecting,
+    required this.hasLocation,
+  });
+}
 
-    while (true) {
-      await Future.delayed(
-        const Duration(milliseconds: 250),
-      );
+/// ==================================================
+/// SINGLE SOURCE OF TRUTH (NO POLLING)
+/// ==================================================
+class LocationHeaderController
+    extends ValueNotifier<LocationHeaderState> {
+  LocationHeaderController._()
+      : super(
+          LocationHeaderState(
+            isDetecting: LocationState.isDetecting,
+            hasLocation:
+                LocationState.hasPersistedLocation,
+          ),
+        );
 
-      if (lastDetecting != LocationState.isDetecting ||
-          lastAddress != LocationState.address) {
-        lastDetecting = LocationState.isDetecting;
-        lastAddress = LocationState.address;
-        notifyListeners();
-      }
-    }
+  static final instance = LocationHeaderController._();
+
+  void sync() {
+    value = LocationHeaderState(
+      isDetecting: LocationState.isDetecting,
+      hasLocation:
+          LocationState.hasPersistedLocation,
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../utils/auth_state.dart';
 import '../../../utils/location_helper.dart';
 import '../../../utils/location_state.dart';
 import '../../../utils/saved_address.dart';
@@ -26,142 +27,157 @@ class LocationBottomSheet extends StatefulWidget {
       _LocationBottomSheetState();
 }
 
-class _LocationBottomSheetState extends State<LocationBottomSheet> {
+class _LocationBottomSheetState extends State<LocationBottomSheet>
+    with WidgetsBindingObserver {
   late Future<List<SavedAddress>> _future;
   bool _locationServiceOn = true;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
   }
 
-  Future<void> _init() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
     _future = SavedAddressStorage.getAll();
     _locationServiceOn =
         await LocationHelper.canUseLocationSilently();
     if (mounted) setState(() {});
   }
 
+  /// ✅ Auto close sheet when returning from settings
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state != AppLifecycleState.resumed) return;
+
+    final enabled =
+        await LocationHelper.canUseLocationSilently();
+
+    if (enabled && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
 
-    return WillPopScope(
-      onWillPop: () async => false,
-      child: Container(
-        height: height * 0.6,
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: AnimatedBuilder(
-          animation: LocationDetectingListenable(),
-          builder: (context, _) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const BottomSheetHandle(),
-                const SizedBox(height: 24),
+    return Container(
+      height: height * 0.6,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: AnimatedBuilder(
+        animation: LocationStateNotifier.instance,
+        builder: (context, _) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const BottomSheetHandle(),
+              const SizedBox(height: 24),
 
-                // =============================================
-                // 🔄 FETCHING LOCATION
-                // =============================================
-                if (LocationState.isDetecting)
-                  const LocationFetchingTile()
+              /// 🔄 Detecting GPS
+              if (LocationState.isDetecting)
+                const LocationFetchingTile()
 
-                // =============================================
-                // 🔴 LOCATION PERMISSION OFF (CENTERED)
-                // =============================================
-                else if (!_locationServiceOn)
-                  Expanded(
-                    child: Center(
-                      child: LocationPermissionOffTile(
-                        onEnable: widget.onUseCurrentLocation,
-                      ),
-                    ),
-                  )
+              else ...[
+                /// 🔴 LOCATION OFF → SHOW ENABLE + OTHERS
+                if (!_locationServiceOn)
+                  LocationPermissionOffTile(
+                    onEnable: widget.onUseCurrentLocation,
+                  ),
 
-                // =============================================
-                // 🟢 LOCATION ON → NORMAL FLOW
-                // =============================================
-                else ...[
+                /// 🟢 LOCATION ON → USE CURRENT LOCATION
+                if (_locationServiceOn) ...[
                   CurrentLocationTile(
                     isDetecting: false,
                     onTap: widget.onUseCurrentLocation,
                   ),
+                ],
 
+                /// SAVED ADDRESSES (ONLY LOGGED IN)
+                if (AuthState.isAuthenticated) ...[
                   const SizedBox(height: 24),
                   const SectionTitle(text: 'Saved addresses'),
                   const SizedBox(height: 12),
-
                   SavedAddressList(
                     future: _future,
                     onSelect: widget.onSelectSavedAddress,
                   ),
+                ],
 
-                  const Spacer(),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
+                const Spacer(),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
 
-                  /// SEARCH MANUALLY
-                  InkWell(
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const AddAddressScreen(),
-                        ),
-                      );
-                      setState(() {
-                        _future =
-                            SavedAddressStorage.getAll();
-                      });
-                    },
-                    child: Row(
-                      children: const [
-                        Icon(
-                          Icons.search,
+                /// SEARCH MANUALLY (ALWAYS AVAILABLE)
+                InkWell(
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const AddAddressScreen(),
+                      ),
+                    );
+                    setState(() {
+                      _future =
+                          SavedAddressStorage.getAll();
+                    });
+                  },
+                  child: Row(
+                    children: const [
+                      Icon(
+                        Icons.search,
+                        color: Color(0xFF03B602),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Search manually',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
                           color: Color(0xFF03B602),
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Search manually',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF03B602),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ],
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 /// --------------------------------------------------
-/// LISTENABLE
+/// CLEAN NOTIFIER (NO INFINITE LOOP)
 /// --------------------------------------------------
-class LocationDetectingListenable extends ChangeNotifier {
-  LocationDetectingListenable() {
-    _tick();
+class LocationStateNotifier extends ChangeNotifier {
+  LocationStateNotifier._() {
+    _sync();
   }
 
-  void _tick() async {
-    bool last = LocationState.isDetecting;
+  static final instance = LocationStateNotifier._();
+
+  bool _last = LocationState.isDetecting;
+
+  void _sync() async {
     while (true) {
       await Future.delayed(const Duration(milliseconds: 200));
-      if (LocationState.isDetecting != last) {
-        last = LocationState.isDetecting;
+      if (_last != LocationState.isDetecting) {
+        _last = LocationState.isDetecting;
         notifyListeners();
       }
     }

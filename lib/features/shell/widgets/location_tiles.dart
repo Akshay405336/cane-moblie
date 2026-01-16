@@ -44,7 +44,7 @@ class SectionTitle extends StatelessWidget {
 }
 
 /// =====================================================
-/// LOCATION PERMISSION OFF (CENTERED + BIGGER)
+/// LOCATION OFF — HORIZONTAL BANNER
 /// =====================================================
 class LocationPermissionOffTile extends StatelessWidget {
   final VoidCallback onEnable;
@@ -59,104 +59,78 @@ class LocationPermissionOffTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          /// LOCATION ICON
+          /// ICON (LEFT)
           Container(
-            width: 72,
-            height: 72,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: green.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.location_off_rounded,
-              size: 36,
               color: green,
+              size: 22,
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(width: 12),
 
-          /// TITLE
-          const Text(
-            'Location permission is off',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: green,
+          /// TEXT (CENTER)
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Location is off',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Enable location for accurate delivery and nearby stores',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(width: 12),
 
-          /// DESCRIPTION
-          const Text(
-            'Turn on precise location to get accurate delivery address, nearby stores and faster service.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.45,
-              color: Colors.grey,
-            ),
-          ),
-
-          const SizedBox(height: 28),
-
-          /// ENABLE LOCATION BUTTON (NO SHADOW)
+          /// ENABLE BUTTON (RIGHT)
           SizedBox(
-            width: double.infinity,
-            height: 52,
+            height: 36,
             child: ElevatedButton(
               onPressed: onEnable,
               style: ElevatedButton.styleFrom(
                 backgroundColor: green,
                 elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
               child: const Text(
-                'Enable location',
+                'Enable',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          /// MAYBE LATER (ONLY SHADOW HERE)
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Maybe later',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
                 ),
               ),
             ),

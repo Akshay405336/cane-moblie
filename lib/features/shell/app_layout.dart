@@ -25,13 +25,10 @@ class _AppLayoutState extends State<AppLayout>
   int _currentIndex = 0;
 
   bool _sheetOpen = false;
-  bool _checkedOnce = false;
+  bool _initialized = false;
 
-  /// 🔐 Tracks waiting for user to enable location service
-  bool _waitingForLocationEnable = false;
-
-  /// ✅ NEW: skip enforcement once after "Maybe later"
-  bool _skipNextEnforcement = false;
+  /// 🔐 Enforce location ONLY once per cold start
+  static bool _enforcedThisSession = false;
 
   final List<Widget> _pages = const [
     HomeScreen(),
@@ -42,7 +39,7 @@ class _AppLayoutState extends State<AppLayout>
   ];
 
   // ===============================================================
-  // INIT
+  // INIT (COLD START)
   // ===============================================================
 
   @override
@@ -52,8 +49,11 @@ class _AppLayoutState extends State<AppLayout>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await LocationState.load();
-      await _enforceLocation();
-      _checkedOnce = true;
+      LocationHeaderController.instance.sync();
+
+      await _enforceLocationIfNeeded();
+
+      _initialized = true;
       if (mounted) setState(() {});
     });
   }
@@ -65,41 +65,30 @@ class _AppLayoutState extends State<AppLayout>
   }
 
   // ===============================================================
-  // APP RESUME
+  // LOCATION ENFORCEMENT (COLD START ONLY)
   // ===============================================================
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state != AppLifecycleState.resumed) return;
+  Future<void> _enforceLocationIfNeeded() async {
+    if (_enforcedThisSession || !mounted) return;
+    _enforcedThisSession = true;
 
-    // 🔥 Auto-fetch after user enabled location in settings
-    if (_waitingForLocationEnable) {
-      _waitingForLocationEnable = false;
-      await _fetchAndSetLocation();
-      return;
-    }
+    final hasStoredLocation =
+        LocationState.hasPersistedLocation;
 
-    await _enforceLocation();
-  }
-
-  // ===============================================================
-  // HARD LOCATION ENFORCEMENT
-  // ===============================================================
-
-  Future<void> _enforceLocation() async {
-    if (!mounted || _sheetOpen) return;
-
-    final hasService =
+    final canUseLocation =
         await LocationHelper.canUseLocationSilently();
-    final hasLocation = LocationState.hasPersistedLocation;
 
-    if (!hasService || !hasLocation) {
-      _openLocationSheet(force: true);
+    /// Ask ONLY if:
+    /// - fresh app open
+    /// - no stored address
+    /// - GPS OFF
+    if (!hasStoredLocation && !canUseLocation) {
+      _openLocationSheet();
     }
   }
 
   // ===============================================================
-  // BUTTON: USE CURRENT LOCATION
+  // USE CURRENT LOCATION (BUTTON TAP)
   // ===============================================================
 
   Future<void> _useCurrentLocation() async {
@@ -108,61 +97,54 @@ class _AppLayoutState extends State<AppLayout>
 
     if (!hasPermission) {
       LocationState.setError('Location permission required');
-      if (mounted) setState(() {});
+      LocationHeaderController.instance.sync();
       return;
     }
 
-    final serviceEnabled =
-        await LocationHelper.ensureLocationServiceEnabled();
-
-    // 🔐 User is going to settings → wait & auto-fetch
-    if (!serviceEnabled) {
-      _waitingForLocationEnable = true;
-      return;
-    }
-
-    await _fetchAndSetLocation();
+    /// 🚨 IMPORTANT:
+    /// Do NOT trust GPS state here
+    /// Just open settings and wait for resume
+    await LocationHelper.ensureLocationServiceEnabled();
   }
 
   // ===============================================================
-  // FETCH + STORE LOCATION
+  // FETCH + SAVE LOCATION
   // ===============================================================
 
-  Future<void> _fetchAndSetLocation() async {
+  Future<void> _fetchAndSaveLocation() async {
     LocationState.startDetecting();
-    if (mounted) setState(() {});
+    LocationHeaderController.instance.sync();
 
     final address =
         await LocationHelper.fetchCurrentAddress();
 
     if (address.isEmpty) {
       LocationState.setError('Unable to detect location');
-      if (mounted) setState(() {});
+      LocationHeaderController.instance.sync();
       return;
     }
 
     await LocationState.setGpsAddress(address);
+    LocationHeaderController.instance.sync();
 
     if (_sheetOpen && mounted) {
       Navigator.pop(context);
     }
-
-    if (mounted) setState(() {});
   }
 
   // ===============================================================
   // OPEN LOCATION SHEET
   // ===============================================================
 
-  void _openLocationSheet({bool force = false}) {
+  void _openLocationSheet() {
     if (_sheetOpen || !mounted) return;
 
     _sheetOpen = true;
 
     showModalBottomSheet(
       context: context,
-      isDismissible: !force,
-      enableDrag: !force,
+      isDismissible: true,
+      enableDrag: true,
       isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
@@ -173,7 +155,7 @@ class _AppLayoutState extends State<AppLayout>
         return LocationBottomSheet(
           onUseCurrentLocation: _useCurrentLocation,
 
-          /// ✅ SAVED ADDRESS SELECT
+          /// SAVED ADDRESS SELECT
           onSelectSavedAddress: ({
             required String id,
             required String address,
@@ -183,25 +165,33 @@ class _AppLayoutState extends State<AppLayout>
               address: address,
             );
 
-            if (mounted) {
-              Navigator.pop(context);
-            }
+            LocationHeaderController.instance.sync();
 
-            setState(() {});
+            if (mounted) Navigator.pop(context);
           },
         );
       },
-    ).whenComplete(() async {
+    ).whenComplete(() {
       _sheetOpen = false;
-
-      /// 🔑 Skip enforcement once after "Maybe later"
-      if (_skipNextEnforcement) {
-        _skipNextEnforcement = false;
-        return;
-      }
-
-      if (mounted) await _enforceLocation();
     });
+  }
+
+  // ===============================================================
+  // APP LIFECYCLE (THIS IS THE KEY FIX)
+  // ===============================================================
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state != AppLifecycleState.resumed) return;
+
+    /// Re-check GPS AFTER returning from system settings
+    final gpsEnabled =
+        await LocationHelper.canUseLocationSilently();
+
+    if (gpsEnabled &&
+        !LocationState.hasPersistedLocation) {
+      await _fetchAndSaveLocation();
+    }
   }
 
   // ===============================================================
@@ -210,8 +200,7 @@ class _AppLayoutState extends State<AppLayout>
 
   @override
   Widget build(BuildContext context) {
-    // ⏳ Wait for first location check
-    if (!_checkedOnce) {
+    if (!_initialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
@@ -220,7 +209,7 @@ class _AppLayoutState extends State<AppLayout>
     return Scaffold(
       appBar: AppHeader(
         onAuthChanged: () => setState(() {}),
-        onLocationTap: () => _openLocationSheet(),
+        onLocationTap: _openLocationSheet,
       ),
       body: IndexedStack(
         index: _currentIndex,
