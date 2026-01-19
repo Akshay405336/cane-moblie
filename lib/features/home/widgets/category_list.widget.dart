@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-
 import '../models/category.model.dart';
+import '../theme/home_spacing.dart';
+import '../theme/home_text_styles.dart';
 
 class CategoryListWidget extends StatelessWidget {
   final List<Category> categories;
@@ -16,83 +17,89 @@ class CategoryListWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(width: 14),
-        itemBuilder: (context, index) {
-          final category = categories[index];
+    return Padding(
+      padding: const EdgeInsets.only(top: HomeSpacing.sm),
+      child: SizedBox(
+        height: 104, // ✅ extra space for shadow (NO overflow)
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none, // ✅ prevents shadow clipping
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(
+            horizontal: HomeSpacing.md,
+            vertical: 6, // ✅ breathing room for bottom shadow
+          ),
+          itemCount: categories.length,
+          separatorBuilder: (_, __) =>
+              const SizedBox(width: HomeSpacing.sm),
+          itemBuilder: (context, index) {
+            final category = categories[index];
 
-          final color =
-              _CategoryStyle.colorFor(category.id);
-          final icon =
-              _CategoryStyle.iconFor(category.id);
-
-          return _CategoryCard(
-            name: category.name,
-            color: color,
-            icon: icon,
-          );
-        },
+            return CategoryIconTile(
+              name: category.name,
+              icon: _CategoryStyle.iconFor(category.id),
+              iconColor: _CategoryStyle.iconColorFor(category.id),
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 /* ================================================= */
-/* CATEGORY CARD                                     */
+/* CATEGORY ICON TILE (BOTTOM SHADOW SAFE)            */
 /* ================================================= */
 
-class _CategoryCard extends StatelessWidget {
+class CategoryIconTile extends StatelessWidget {
   final String name;
-  final Color color;
   final IconData icon;
+  final Color iconColor;
 
-  const _CategoryCard({
+  const CategoryIconTile({
+    super.key,
     required this.name,
-    required this.color,
     required this.icon,
+    required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 90,
+      width: 74,
       padding: const EdgeInsets.symmetric(
-        vertical: 14,
-        horizontal: 10,
+        vertical: 10,
+        horizontal: 6,
       ),
       decoration: BoxDecoration(
-        color: color,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.06), // ✅ soft
+            offset: const Offset(3, 7), // ✅ bottom only
             blurRadius: 8,
-            offset: const Offset(0, 4),
+            spreadRadius: -2, // ✅ no top/side shadow
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 28,
-            color: Colors.black87,
+            size: 26,
+            color: iconColor,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Text(
             name,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
+            style: HomeTextStyles.body.copyWith(
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -107,38 +114,33 @@ class _CategoryCard extends StatelessWidget {
 /* ================================================= */
 
 class _CategoryStyle {
-  /// Soft pastel / creamy colors
-  static const List<Color> _colors = [
-    Color(0xFFFFF3E0), // cream peach
-    Color(0xFFE8F5E9), // mint cream
-    Color(0xFFE3F2FD), // light sky
-    Color(0xFFF3E5F5), // lavender cream
-    Color(0xFFFFEBEE), // rose cream
-    Color(0xFFE0F2F1), // aqua cream
-    Color(0xFFFFFDE7), // butter cream
+  static const List<Color> _iconColors = [
+    Color(0xFF03B602),
+    Color(0xFFFF9800),
+    Color(0xFF2196F3),
+    Color(0xFFE91E63),
+    Color(0xFF9C27B0),
+    Color(0xFF009688),
+    Color(0xFFFF5722),
   ];
 
-  /// Icons that fit groceries / categories
   static const List<IconData> _icons = [
     Icons.local_florist,
     Icons.eco,
-    Icons.shopping_bag,
+    Icons.apple,
     Icons.restaurant,
     Icons.local_grocery_store,
-    Icons.grass,
-    Icons.apple,
     Icons.spa,
+    Icons.grass,
   ];
 
-  /// Always returns same color for same category
-  static Color colorFor(String seed) {
-    final index = seed.hashCode.abs() % _colors.length;
-    return _colors[index];
-  }
-
-  /// Always returns same icon for same category
   static IconData iconFor(String seed) {
     final index = seed.hashCode.abs() % _icons.length;
     return _icons[index];
+  }
+
+  static Color iconColorFor(String seed) {
+    final index = seed.hashCode.abs() % _iconColors.length;
+    return _iconColors[index];
   }
 }

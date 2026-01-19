@@ -34,4 +34,5 @@ flutter:
 
   # ✅ ASSETS REGISTERED HERE
   assets:
-    - assets/
+    - assets/images/
+    - assets/logo/

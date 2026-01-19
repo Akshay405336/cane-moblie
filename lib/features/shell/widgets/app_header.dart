@@ -22,7 +22,6 @@ class AppHeader extends StatelessWidget
   @override
   Widget build(BuildContext context) {
     /// 🔐 SAFETY NET
-    /// Ensures header is never stale
     LocationHeaderController.instance.sync();
 
     return ValueListenableBuilder<LocationHeaderState>(
@@ -34,21 +33,10 @@ class AppHeader extends StatelessWidget
 
         return AppBar(
           elevation: 0,
-          backgroundColor: Colors.transparent,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF9FFF8),
-                  Color(0xFFE8F5E9),
-                ],
-              ),
-            ),
-          ),
+          backgroundColor: const Color(0xFFE6F4EA), // ✅ MATCH HOME
+          
+          /* ================= LOCATION ================= */
 
-          // 📍 LOCATION
           title: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap:
@@ -102,8 +90,7 @@ class AppHeader extends StatelessWidget
                       ),
                       const SizedBox(width: 4),
                       const Icon(
-                        Icons
-                            .keyboard_arrow_down_rounded,
+                        Icons.keyboard_arrow_down_rounded,
                         color: Color(0xFF558B2F),
                       ),
                     ],
@@ -113,33 +100,52 @@ class AppHeader extends StatelessWidget
             ),
           ),
 
-          // 👤 PROFILE / LOGIN
-          actions: [
-            IconButton(
-              splashRadius: 22,
-              icon: Icon(
-                isLoggedIn
-                    ? Icons.account_circle
-                    : Icons.person_outline,
-                size: 26,
-                color: const Color(0xFF2E7D32),
-              ),
-              onPressed: () async {
-                if (!isLoggedIn) {
-                  final result =
-                      await Navigator.pushNamed(
-                    context,
-                    AppRoutes.login,
-                  );
-                  if (result == true) onAuthChanged();
-                  return;
-                }
+          /* ================= PROFILE ICON ================= */
 
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.profile,
-                );
-              },
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(22),
+                onTap: () async {
+                  if (!isLoggedIn) {
+                    final result =
+                        await Navigator.pushNamed(
+                      context,
+                      AppRoutes.login,
+                    );
+                    if (result == true) onAuthChanged();
+                    return;
+                  }
+
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.profile,
+                  );
+                },
+                child: Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white, // ✅ WHITE BG
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.10),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    isLoggedIn
+                        ? Icons.account_circle
+                        : Icons.person,
+                    size: 22,
+                    color: const Color(0xFF03B602), // ✅ SAME GREEN AS HOME ICON
+                  ),
+                ),
+              ),
             ),
           ],
         );
@@ -153,8 +159,8 @@ class AppHeader extends StatelessWidget
 
   Widget _locationShimmer() {
     return Shimmer.fromColors(
-      baseColor: Colors.green.shade200,
-      highlightColor: Colors.green.shade50,
+      baseColor: const Color(0xFFB7E1C2),
+      highlightColor: const Color(0xFFE9F9ED),
       child: Container(
         height: 18,
         width: 140,

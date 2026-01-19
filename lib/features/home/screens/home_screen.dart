@@ -6,13 +6,14 @@ import '../models/product.model.dart';
 import '../services/category_socket_service.dart';
 import '../services/product_socket_service.dart';
 
-import '../widgets/category_list.widget.dart';
-import '../widgets/category_shimmer.widget.dart';
+import '../sections/home_search.section.dart';
+import '../sections/home_categories.section.dart';
+import '../sections/home_products.section.dart';
+import '../widgets/home_banner_slider.section.dart';
 
-import '../widgets/product_grid_widget.dart';
-import '../widgets/product_shimmer.widget.dart';
+import '../theme/home_colors.dart';
+import '../theme/home_spacing.dart';
 
-import 'categories.screen.dart';
 import 'products.screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -37,8 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    /* ---------- CATEGORIES ---------- */
-
+    // ---------- CATEGORIES ----------
     final cachedCategories =
         CategorySocketService.cachedCategories;
 
@@ -50,8 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
     CategorySocketService.subscribe(_onCategories);
     CategorySocketService.connect();
 
-    /* ---------- PRODUCTS ---------- */
-
+    // ---------- PRODUCTS ----------
     final cachedProducts =
         ProductSocketService.cachedProducts;
 
@@ -91,130 +90,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-
-            /* ================= CATEGORIES ================= */
-
-            _categoryHeader(context),
-            _categorySection(),
-
-            const SizedBox(height: 24),
-
-            /* ================= PRODUCTS ================= */
-
-            _productHeader(context),
-            _productSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /* ================= CATEGORY UI ================= */
-
-  Widget _categoryHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Categories',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
+    return Scaffold(
+      backgroundColor: HomeColors.pureWhite,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(
+            bottom: HomeSpacing.xl,
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const CategoriesScreen(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /* ================= TOP GREEN CONTAINER ================= */
+
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.only(
+                  bottom: HomeSpacing.lg,
                 ),
-              );
-            },
-            child: const Text('View all'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _categorySection() {
-    if (_loadingCategories) {
-      return const CategoryShimmer();
-    }
-
-    if (_categories.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Text(
-          'No categories available',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-
-    return CategoryListWidget(categories: _categories);
-  }
-
-  /* ================= PRODUCT UI ================= */
-
-  Widget _productHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Fresh Products',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const ProductsScreen(),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3FBF5),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(24), // ✅ soft curve
+                  ),
                 ),
-              );
-            },
-            child: const Text('View all'),
+                child: Column(
+                  children: const [
+                    SizedBox(height: HomeSpacing.sm),
+
+                    /// SEARCH
+                    HomeSearchSection(),
+
+                    SizedBox(height: HomeSpacing.md),
+
+                    /// BANNER
+                    HomeBannerSliderSection(),
+                  ],
+                ),
+              ),
+
+              /* ================= CATEGORIES ================= */
+
+              const SizedBox(height: HomeSpacing.lg),
+
+              HomeCategoriesSection(
+                loading: _loadingCategories,
+                categories: _categories,
+              ),
+
+              /* ================= PRODUCTS ================= */
+
+              const SizedBox(height: HomeSpacing.xl),
+
+              HomeProductsSection(
+                loading: _loadingProducts,
+                products: _products,
+                onViewAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ProductsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
-  }
-
-  Widget _productSection() {
-    if (_loadingProducts) {
-      return const ProductShimmerWidget();
-    }
-
-    if (_products.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Text(
-          'No products available',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-
-    return ProductGridWidget(products: _products);
   }
 }

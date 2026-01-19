@@ -4,6 +4,9 @@ import '../models/product.model.dart';
 import '../services/product_socket_service.dart';
 import '../widgets/product_grid_widget.dart';
 import '../widgets/product_shimmer.widget.dart';
+import '../theme/home_colors.dart';
+import '../theme/home_spacing.dart';
+import '../theme/home_text_styles.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -21,10 +24,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
 
-    // 🔥 SUBSCRIBE FIRST
+    /// Subscribe first
     ProductSocketService.subscribe(_onProducts);
 
-    // ✅ USE CACHE IF AVAILABLE
+    /// Use cache if available
     final cachedProducts =
         ProductSocketService.cachedProducts;
 
@@ -42,9 +45,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     super.dispose();
   }
 
-  /* -------------------------------------------------- */
-  /* SOCKET HANDLER                                     */
-  /* -------------------------------------------------- */
+  /* ================= SOCKET HANDLER ================= */
 
   void _onProducts(List<Product> products) {
     if (!mounted) return;
@@ -58,28 +59,61 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HomeColors.pureWhite,
+
+      /* ================= APP BAR ================= */
+
       appBar: AppBar(
-        title: const Text('Products'),
+        backgroundColor: HomeColors.greenPastry,
+        elevation: 0,
         centerTitle: true,
+        title: const Text(
+          'Products',
+          style: HomeTextStyles.sectionTitle,
+        ),
+        iconTheme: const IconThemeData(
+          color: HomeColors.primaryGreen,
+        ),
       ),
+
+      /* ================= BODY ================= */
+
       body: _loading
-          ? const ProductShimmerWidget()
+          ? const Padding(
+              padding: EdgeInsets.all(HomeSpacing.md),
+              child: ProductShimmerWidget(),
+            )
           : _products.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No products available',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+              ? const _EmptyState()
+              : Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: HomeSpacing.lg,
                   ),
-                )
-              : SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.only(bottom: 24),
                   child: ProductGridWidget(
                     products: _products,
                   ),
                 ),
+    );
+  }
+}
+
+/* ================================================= */
+/* EMPTY STATE                                       */
+/* ================================================= */
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text(
+        'No products available',
+        style: TextStyle(
+          color: HomeColors.textGrey,
+          fontSize: 14,
+        ),
+      ),
     );
   }
 }

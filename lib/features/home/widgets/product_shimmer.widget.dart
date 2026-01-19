@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../theme/home_colors.dart';
+import '../theme/home_spacing.dart';
 
 class ProductShimmerWidget extends StatelessWidget {
   const ProductShimmerWidget({super.key});
@@ -9,23 +11,27 @@ class ProductShimmerWidget extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: HomeSpacing.md,
+      ),
       itemCount: 6,
       gridDelegate:
           const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
-        childAspectRatio: 0.72,
+        mainAxisSpacing: HomeSpacing.md,
+        crossAxisSpacing: HomeSpacing.md,
+        childAspectRatio: 0.64, // matches product grid
       ),
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
-          baseColor: Colors.grey.shade200,
-          highlightColor: Colors.grey.shade100,
+          baseColor: HomeColors.lightGrey,
+          highlightColor: HomeColors.creamyWhite,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
+              color: HomeColors.pureWhite,
+              borderRadius: BorderRadius.circular(
+                HomeSpacing.radiusLg,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,33 +39,57 @@ class ProductShimmerWidget extends StatelessWidget {
                 /* IMAGE PLACEHOLDER */
                 Expanded(
                   child: Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
+                      color: HomeColors.lightGrey,
                       borderRadius:
-                          BorderRadius.vertical(
-                        top: Radius.circular(18),
+                          const BorderRadius.vertical(
+                        top: Radius.circular(
+                          HomeSpacing.radiusLg,
+                        ),
                       ),
-                      color: Colors.white,
                     ),
                   ),
                 ),
 
-                /* TEXT PLACEHOLDER */
+                /* TEXT + PRICE PLACEHOLDER */
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(
+                    HomeSpacing.sm,
+                  ),
                   child: Column(
                     crossAxisAlignment:
                         CrossAxisAlignment.start,
                     children: [
                       Container(
-                        height: 14,
-                        width: double.infinity,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
                         height: 12,
-                        width: 80,
-                        color: Colors.white,
+                        width: double.infinity,
+                        color: HomeColors.lightGrey,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            height: 12,
+                            width: 60,
+                            color: HomeColors.lightGrey,
+                          ),
+                          Container(
+                            height: 24,
+                            width: 44,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color:
+                                    HomeColors.lightGrey,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(
+                                HomeSpacing.radiusSm,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

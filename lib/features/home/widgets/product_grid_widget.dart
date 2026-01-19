@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.model.dart';
+import '../theme/home_spacing.dart';
 import 'product_card.dart';
 
 /// Product grid (2-column)
@@ -24,16 +25,21 @@ class ProductGridWidget extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: HomeSpacing.md,
+        vertical: HomeSpacing.sm,
+      ),
       itemCount: products.length,
       gridDelegate:
           const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 14,
-        crossAxisSpacing: 14,
 
-        // 🔥 CRITICAL FIX — more vertical room
-        childAspectRatio: 0.66,
+        // Clean grocery spacing
+        mainAxisSpacing: HomeSpacing.md,
+        crossAxisSpacing: HomeSpacing.md,
+
+        // ✅ FINAL FIX — hugs card perfectly
+        childAspectRatio: 0.64,
       ),
       itemBuilder: (context, index) {
         return ProductCard(
