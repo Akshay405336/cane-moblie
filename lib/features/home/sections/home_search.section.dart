@@ -123,7 +123,7 @@ Widget build(BuildContext context) {
               BorderRadius.circular(HomeSpacing.radiusLg),
           child: Image.asset(
             'assets/images/cane-poster.png',
-            width: 72,          // 👈 adjust as needed
+            width: 75,          // 👈 adjust as needed
             height: 48,
             fit: BoxFit.fill,
           ),
