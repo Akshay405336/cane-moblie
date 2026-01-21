@@ -23,6 +23,7 @@ class ProductGridWidget extends StatelessWidget {
     }
 
     return GridView.builder(
+      key: const PageStorageKey('product-grid'),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(
@@ -38,12 +39,15 @@ class ProductGridWidget extends StatelessWidget {
         mainAxisSpacing: HomeSpacing.md,
         crossAxisSpacing: HomeSpacing.md,
 
-        // ✅ FINAL FIX — hugs card perfectly
+        // ✅ hugs card perfectly
         childAspectRatio: 0.64,
       ),
       itemBuilder: (context, index) {
+        final product = products[index];
+
         return ProductCard(
-          product: products[index],
+          key: ValueKey(product.id), // 🔒 stable during realtime updates
+          product: product,
         );
       },
     );

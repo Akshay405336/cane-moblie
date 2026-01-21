@@ -10,7 +10,7 @@ class ProductSocketService {
 
   static final List<void Function(List<Product>)> _listeners = [];
 
-  // 🔥 CACHE (CRITICAL)
+  // 🔥 CACHE (SOURCE OF TRUTH)
   static List<Product> _cachedProducts = [];
 
   /* ================================================= */
@@ -84,7 +84,10 @@ class ProductSocketService {
   static void subscribe(
     void Function(List<Product>) listener,
   ) {
-    _listeners.add(listener);
+    // 🔒 PREVENT DUPLICATE LISTENERS
+    if (!_listeners.contains(listener)) {
+      _listeners.add(listener);
+    }
 
     // 🔥 INSTANT REPLAY FOR LATE SUBSCRIBERS
     if (_cachedProducts.isNotEmpty) {

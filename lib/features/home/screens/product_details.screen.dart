@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/product.model.dart';
+import '../services/product_socket_service.dart';
 import '../theme/home_colors.dart';
 import '../theme/home_spacing.dart';
 import '../theme/home_text_styles.dart';
@@ -8,13 +9,58 @@ import '../widgets/product_add_button.dart';
 import '../widgets/product_image_gallery.dart';
 import '../widgets/product_price_view.dart';
 
-class ProductDetailsScreen extends StatelessWidget {
+class ProductDetailsScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailsScreen({
     super.key,
     required this.product,
   });
+
+  @override
+  State<ProductDetailsScreen> createState() =>
+      _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState
+    extends State<ProductDetailsScreen> {
+  late Product _product;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initial product
+    _product = widget.product;
+
+    // Subscribe to realtime updates
+    ProductSocketService.subscribe(_onProducts);
+
+    // Ensure socket is connected
+    ProductSocketService.connect();
+  }
+
+  @override
+  void dispose() {
+    ProductSocketService.unsubscribe(_onProducts);
+    super.dispose();
+  }
+
+  /* ================= REALTIME HANDLER ================= */
+
+  void _onProducts(List<Product> products) {
+    if (!mounted) return;
+
+    final updated = products
+        .where((p) => p.id == _product.id)
+        .toList();
+
+    if (updated.isEmpty) return;
+
+    setState(() {
+      _product = updated.first;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +74,7 @@ class ProductDetailsScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          product.name,
+          _product.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: HomeTextStyles.sectionTitle,
@@ -41,22 +87,19 @@ class ProductDetailsScreen extends StatelessWidget {
       /* ================= CONTENT ================= */
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          bottom: 120, // ✅ space for bottom bar
-        ),
+        padding: const EdgeInsets.only(bottom: 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             /* ================= IMAGE GALLERY ================= */
 
             ProductImageGallery(
-              mainImage: product.mainImage,
-              galleryImages: product.galleryImages,
+              key: ValueKey(_product.mainImage),
+              mainImage: _product.mainImage,
+              galleryImages: _product.galleryImages,
             ),
 
             const SizedBox(height: HomeSpacing.md),
-
-            /* ================= PRODUCT INFO ================= */
 
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -72,21 +115,21 @@ class ProductDetailsScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          product.name,
+                          _product.name,
                           style: HomeTextStyles.offerTitle,
                         ),
                       ),
-                      if (product.isTrending)
+                      if (_product.isTrending)
                         const _TrendingFireBadge(),
                     ],
                   ),
 
                   const SizedBox(height: HomeSpacing.sm),
 
-                  /* PRICE (NO DISCOUNT TEXT HERE) */
+                  /* PRICE */
 
                   ProductPriceView(
-                    product: product,
+                    product: _product,
                     showDiscountText: false,
                   ),
 
@@ -94,10 +137,12 @@ class ProductDetailsScreen extends StatelessWidget {
 
                   /* SHORT DESCRIPTION */
 
-                  if (product.shortDescription != null &&
-                      product.shortDescription!.trim().isNotEmpty)
+                  if (_product.shortDescription != null &&
+                      _product.shortDescription!
+                          .trim()
+                          .isNotEmpty)
                     Text(
-                      product.shortDescription!,
+                      _product.shortDescription!,
                       style: HomeTextStyles.body,
                     ),
 
@@ -105,15 +150,17 @@ class ProductDetailsScreen extends StatelessWidget {
 
                   /* LONG DESCRIPTION */
 
-                  if (product.longDescription != null &&
-                      product.longDescription!.trim().isNotEmpty) ...[
+                  if (_product.longDescription != null &&
+                      _product.longDescription!
+                          .trim()
+                          .isNotEmpty) ...[
                     const Text(
                       'Description',
                       style: HomeTextStyles.sectionTitle,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      product.longDescription!,
+                      _product.longDescription!,
                       style: HomeTextStyles.bodyGrey.copyWith(
                         height: 1.5,
                       ),
@@ -126,15 +173,15 @@ class ProductDetailsScreen extends StatelessWidget {
         ),
       ),
 
-      /* ================= BOTTOM ADD BAR ================= */
+      /* ================= BOTTOM BAR ================= */
 
-      bottomNavigationBar: _BottomAddBar(product: product),
+      bottomNavigationBar: _BottomAddBar(product: _product),
     );
   }
 }
 
 /* ================================================= */
-/* BOTTOM ADD BAR (ZEPTO STYLE – CONSISTENT)          */
+/* BOTTOM ADD BAR                                    */
 /* ================================================= */
 
 class _BottomAddBar extends StatelessWidget {
@@ -174,7 +221,7 @@ class _BottomAddBar extends StatelessWidget {
 }
 
 /* ================================================= */
-/* TRENDING FIRE BADGE (MATCH CARD STYLE)             */
+/* TRENDING BADGE                                    */
 /* ================================================= */
 
 class _TrendingFireBadge extends StatelessWidget {
@@ -183,6 +230,7 @@ class _TrendingFireBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.all(6),
       decoration: const BoxDecoration(
         color: Colors.red,

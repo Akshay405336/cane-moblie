@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/category.model.dart';
 import '../widgets/category_list.widget.dart';
 import '../widgets/category_shimmer.widget.dart';
@@ -19,27 +20,46 @@ class HomeCategoriesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      key: const ValueKey('home-categories-section'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header(),
-        const SizedBox(height: HomeSpacing.md), // ✅ little more space
-        loading
-            ? const CategoryShimmer()
-            : CategoryListWidget(categories: categories),
+        const _Header(),
+        const SizedBox(height: HomeSpacing.md),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: loading
+              ? const CategoryShimmer(
+                  key: ValueKey('category-shimmer'),
+                )
+              : CategoryListWidget(
+                  key: const ValueKey('category-list'),
+                  categories: categories,
+                ),
+        ),
       ],
     );
   }
+}
 
-  Widget _header() {
+/* ================================================= */
+/* HEADER                                            */
+/* ================================================= */
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: HomeSpacing.md),
+      padding:
+          const EdgeInsets.symmetric(horizontal: HomeSpacing.md),
       child: Row(
         children: [
           Container(
             height: 18,
             width: 4,
             decoration: BoxDecoration(
-              color: HomeColors.primaryGreen, // ✅ dark green accent
+              color: HomeColors.primaryGreen,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -47,7 +67,7 @@ class HomeCategoriesSection extends StatelessWidget {
           Text(
             'Categories',
             style: HomeTextStyles.sectionTitle.copyWith(
-              fontSize: 20, // ✅ bigger text
+              fontSize: 20,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.3,
             ),

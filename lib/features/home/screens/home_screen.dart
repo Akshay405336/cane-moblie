@@ -17,7 +17,7 @@ import '../theme/home_spacing.dart';
 import 'products.screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -38,7 +38,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // ---------- CATEGORIES ----------
+    /* ================= CATEGORIES ================= */
+
+    // 1️⃣ Subscribe first
+    CategorySocketService.subscribe(_onCategories);
+
+    // 2️⃣ Hydrate from cache (instant UI)
     final cachedCategories =
         CategorySocketService.cachedCategories;
 
@@ -47,10 +52,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadingCategories = false;
     }
 
-    CategorySocketService.subscribe(_onCategories);
+    // 3️⃣ Ensure socket connected
     CategorySocketService.connect();
 
-    // ---------- PRODUCTS ----------
+    /* ================= PRODUCTS ================= */
+
+    ProductSocketService.subscribe(_onProducts);
+
     final cachedProducts =
         ProductSocketService.cachedProducts;
 
@@ -59,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadingProducts = false;
     }
 
-    ProductSocketService.subscribe(_onProducts);
     ProductSocketService.connect();
   }
 
@@ -94,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: HomeColors.pureWhite,
       body: SafeArea(
         child: SingleChildScrollView(
+          key: const PageStorageKey('home-scroll'),
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(
             bottom: HomeSpacing.xl,
@@ -101,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /* ================= TOP GREEN CONTAINER ================= */
+              /* ================= TOP GREEN ================= */
 
               Container(
                 width: double.infinity,
@@ -111,19 +119,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: const BoxDecoration(
                   color: Color(0xFFF3FBF5),
                   borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(24), // ✅ soft curve
+                    bottom: Radius.circular(24),
                   ),
                 ),
                 child: Column(
                   children: const [
                     SizedBox(height: HomeSpacing.sm),
-
-                    /// SEARCH
                     HomeSearchSection(),
-
                     SizedBox(height: HomeSpacing.md),
-
-                    /// BANNER
                     HomeBannerSliderSection(),
                   ],
                 ),
@@ -134,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: HomeSpacing.lg),
 
               HomeCategoriesSection(
+                key: const ValueKey('home-categories'),
                 loading: _loadingCategories,
                 categories: _categories,
               ),
@@ -143,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: HomeSpacing.xl),
 
               HomeProductsSection(
+                key: const ValueKey('home-products'),
                 loading: _loadingProducts,
                 products: _products,
                 onViewAll: () {

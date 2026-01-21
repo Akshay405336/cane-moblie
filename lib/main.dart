@@ -1,13 +1,27 @@
 import 'package:flutter/material.dart';
 
 import 'routes.dart';
+import './features/home/services/product_socket_service.dart';
+import './features/home/services/category_socket_service.dart';
+import './utils/app_lifecycle_handler.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔄 App lifecycle handling
+  WidgetsBinding.instance.addObserver(
+    AppLifecycleHandler(),
+  );
+
+  // 🔥 Warm up sockets early
+  ProductSocketService.connect();
+  CategorySocketService.connect();
+
   runApp(const CaneAndTenderApp());
 }
 
 class CaneAndTenderApp extends StatelessWidget {
-  const CaneAndTenderApp({Key? key}) : super(key: key);
+  const CaneAndTenderApp({super.key});
 
   @override
   Widget build(BuildContext context) {

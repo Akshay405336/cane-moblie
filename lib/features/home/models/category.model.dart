@@ -1,44 +1,41 @@
 /// Public Category model
-/// Used only for HOME / EXPLORE (customer side)
+/// Used for HOME / EXPLORE / Product mapping
 class Category {
   final String id;
   final String name;
-  final int sortOrder;
+  final String? imagePath;
 
   const Category({
     required this.id,
     required this.name,
-    required this.sortOrder,
+    this.imagePath,
   });
 
-  /// JSON → Category
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       id: json['id'] as String,
       name: json['name'] as String,
-      sortOrder: json['sortOrder'] as int,
+      imagePath: json['imagePath'] as String?,
     );
   }
 
-  /// Category → JSON (optional, future use)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'name': name,
-      'sortOrder': sortOrder,
+      if (imagePath != null) 'imagePath': imagePath,
     };
   }
 
-  /// Copy helper (useful for UI updates)
   Category copyWith({
     String? id,
     String? name,
-    int? sortOrder,
+    String? imagePath,
   }) {
     return Category(
       id: id ?? this.id,
       name: name ?? this.name,
-      sortOrder: sortOrder ?? this.sortOrder,
+      imagePath: imagePath ?? this.imagePath,
     );
   }
 }

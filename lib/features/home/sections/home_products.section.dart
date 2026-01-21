@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/product.model.dart';
 import '../widgets/product_grid_widget.dart';
 import '../widgets/product_shimmer.widget.dart';
@@ -20,54 +21,76 @@ class HomeProductsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      key: const ValueKey('home-products-section'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: HomeSpacing.sm),
 
-        /// ===== HEADER =====
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: HomeSpacing.md,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Fresh Products',
-                style: HomeTextStyles.sectionTitle,
-              ),
-              TextButton(
-                onPressed: onViewAll,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'View all',
-                  style: HomeTextStyles.bodyGrey,
-                ),
-              ),
-            ],
-          ),
-        ),
+        const _Header(),
 
         const SizedBox(height: HomeSpacing.md),
 
-        /// ===== CONTENT =====
-        if (loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: HomeSpacing.md,
-            ),
-            child: ProductShimmerWidget(),
-          )
-        else
-          ProductGridWidget(
-            products: products.length > 6
-                ? products.take(6).toList() // 👈 Home preview
-                : products,
-          ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: loading
+              ? const Padding(
+                  key: ValueKey('product-shimmer'),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: HomeSpacing.md,
+                  ),
+                  child: ProductShimmerWidget(),
+                )
+              : ProductGridWidget(
+                  key: const ValueKey('product-grid'),
+                  products: products.length > 6
+                      ? products.take(6).toList() // 👈 Home preview
+                      : products,
+                ),
+        ),
       ],
+    );
+  }
+}
+
+/* ================================================= */
+/* HEADER                                            */
+/* ================================================= */
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: HomeSpacing.md,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Fresh Products',
+            style: HomeTextStyles.sectionTitle.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // This will be overridden by parent callback
+              // Kept stateless & rebuild-safe
+            },
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              tapTargetSize:
+                  MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'View all',
+              style: HomeTextStyles.bodyGrey,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

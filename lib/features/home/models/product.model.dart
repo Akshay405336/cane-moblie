@@ -1,7 +1,13 @@
+import 'category.model.dart';
+import 'product_unit.model.dart';
+import 'product_rating.model.dart';
+
 /// Public Product model
-/// Used for HOME / PRODUCT LIST / PRODUCT DETAILS (customer side)
+/// Used for HOME / PRODUCT LIST / PRODUCT DETAILS
 class Product {
   final String id;
+
+  final Category category;
 
   final String name;
   final String slug;
@@ -12,6 +18,10 @@ class Product {
   final String mainImage;
   final List<String> galleryImages;
 
+  final ProductUnit unit;
+  final List<String> tags;
+  final ProductRating rating;
+
   final String? shortDescription;
   final String? longDescription;
 
@@ -19,12 +29,16 @@ class Product {
 
   const Product({
     required this.id,
+    required this.category,
     required this.name,
     required this.slug,
     required this.originalPrice,
     required this.discountPrice,
     required this.mainImage,
     required this.galleryImages,
+    required this.unit,
+    required this.tags,
+    required this.rating,
     required this.shortDescription,
     required this.longDescription,
     required this.isTrending,
@@ -37,6 +51,10 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'] as String,
+
+      category: Category.fromJson(
+        json['category'],
+      ),
 
       name: json['name']['value'] as String,
       slug: json['slug']['value'] as String,
@@ -59,6 +77,18 @@ class Product {
               .map((e) => e as String)
               .toList(),
 
+      unit: ProductUnit.fromJson(
+        json['unit'],
+      ),
+
+      tags: List<String>.from(
+        json['tags'] ?? [],
+      ),
+
+      rating: ProductRating.fromJson(
+        json['rating'],
+      ),
+
       shortDescription:
           json['shortDescription'] as String?,
 
@@ -71,19 +101,16 @@ class Product {
   }
 
   /* ================================================= */
-  /* PRODUCT HELPERS (UI FRIENDLY)                     */
+  /* UI HELPERS                                        */
   /* ================================================= */
 
-  /// Final price shown to customer
   double get displayPrice =>
       discountPrice ?? originalPrice;
 
-  /// Check if product has discount
   bool get hasDiscount =>
       discountPrice != null &&
       discountPrice! < originalPrice;
 
-  /// Discount percentage (optional UI badge)
   int get discountPercent {
     if (!hasDiscount) return 0;
     return (((originalPrice - discountPrice!) /
@@ -93,52 +120,28 @@ class Product {
   }
 
   /* ================================================= */
-  /* PRODUCT → JSON (OPTIONAL)                         */
-  /* ================================================= */
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': {
-        'value': name,
-      },
-      'slug': {
-        'value': slug,
-      },
-      'price': {
-        'originalPrice': originalPrice,
-        'discountPrice': discountPrice,
-      },
-      'images': {
-        'mainImage': mainImage,
-        'galleryImages': galleryImages,
-      },
-      'shortDescription': shortDescription,
-      'longDescription': longDescription,
-      'trendState': {
-        'trending': isTrending,
-      },
-    };
-  }
-
-  /* ================================================= */
-  /* COPY WITH (UI UPDATES)                            */
+  /* COPY WITH                                         */
   /* ================================================= */
 
   Product copyWith({
     String? id,
+    Category? category,
     String? name,
     String? slug,
     double? originalPrice,
     double? discountPrice,
     String? mainImage,
     List<String>? galleryImages,
+    ProductUnit? unit,
+    List<String>? tags,
+    ProductRating? rating,
     String? shortDescription,
     String? longDescription,
     bool? isTrending,
   }) {
     return Product(
       id: id ?? this.id,
+      category: category ?? this.category,
       name: name ?? this.name,
       slug: slug ?? this.slug,
       originalPrice:
@@ -148,6 +151,9 @@ class Product {
       mainImage: mainImage ?? this.mainImage,
       galleryImages:
           galleryImages ?? this.galleryImages,
+      unit: unit ?? this.unit,
+      tags: tags ?? this.tags,
+      rating: rating ?? this.rating,
       shortDescription:
           shortDescription ?? this.shortDescription,
       longDescription:

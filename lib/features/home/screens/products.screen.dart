@@ -24,19 +24,20 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
 
-    /// Subscribe first
+    // 1️⃣ Subscribe first (never miss events)
     ProductSocketService.subscribe(_onProducts);
 
-    /// Use cache if available
+    // 2️⃣ Hydrate from cache (instant UI)
     final cachedProducts =
         ProductSocketService.cachedProducts;
 
     if (cachedProducts.isNotEmpty) {
       _products = cachedProducts;
       _loading = false;
-    } else {
-      ProductSocketService.connect();
     }
+
+    // 3️⃣ ALWAYS ensure socket is connected
+    ProductSocketService.connect();
   }
 
   @override

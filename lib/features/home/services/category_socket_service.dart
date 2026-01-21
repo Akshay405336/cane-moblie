@@ -10,7 +10,7 @@ class CategorySocketService {
 
   static final List<void Function(List<Category>)> _listeners = [];
 
-  // 🔥 CACHE (CRITICAL FIX)
+  // 🔥 CACHE (SOURCE OF TRUTH)
   static List<Category> _cachedCategories = [];
 
   /* ================================================= */
@@ -18,7 +18,12 @@ class CategorySocketService {
   /* ================================================= */
 
   static void connect() {
-    if (_socket != null && _socket!.connected) return;
+    if (_socket != null && _socket!.connected) {
+      print('ℹ️ CATEGORY SOCKET already connected');
+      return;
+    }
+
+    print('🚀 CONNECTING category socket...');
 
     _socket = IO.io(
       '${Env.baseUrl}/public/categories',
@@ -31,10 +36,38 @@ class CategorySocketService {
           .build(),
     );
 
-    /* 🔥 LISTENERS FIRST */
+    /* ================================================= */
+    /* 🔥 SOCKET EVENTS                                  */
+    /* ================================================= */
+
+    _socket!.onConnect((_) {
+      print('✅ CATEGORY SOCKET CONNECTED');
+    });
+
+    _socket!.onDisconnect((_) {
+      print('❌ CATEGORY SOCKET DISCONNECTED');
+    });
+
+    _socket!.onError((err) {
+      print('🔥 CATEGORY SOCKET ERROR: $err');
+    });
+
+    _socket!.onAny((event, data) {
+      print('📡 CATEGORY SOCKET EVENT: $event');
+    });
+
+    /* ================================================= */
+    /* 🔥 DATA EVENT                                     */
+    /* ================================================= */
 
     _socket!.on('categories.updated', (data) {
-      if (data == null || data['categories'] == null) return;
+      print('🟢 FLUTTER RECEIVED categories.updated');
+      print('📦 RAW DATA => $data');
+
+      if (data == null || data['categories'] == null) {
+        print('⚠️ categories.updated payload invalid');
+        return;
+      }
 
       final List list = data['categories'] as List;
 
@@ -46,6 +79,10 @@ class CategorySocketService {
           )
           .toList();
 
+      print(
+        '🎯 PARSED ${categories.length} categories',
+      );
+
       // ✅ UPDATE CACHE
       _cachedCategories = categories;
 
@@ -53,24 +90,6 @@ class CategorySocketService {
       for (final listener in _listeners) {
         listener(categories);
       }
-    });
-
-    /* 🔍 DEBUG LOGS */
-
-    _socket!.onConnect((_) {
-      print('✅ Category socket connected');
-    });
-
-    _socket!.onDisconnect((_) {
-      print('❌ Category socket disconnected');
-    });
-
-    _socket!.onError((err) {
-      print('🔥 Socket error: $err');
-    });
-
-    _socket!.onAny((event, data) {
-      print('📡 $event => $data');
     });
 
     /* 🚀 CONNECT LAST */
@@ -84,10 +103,16 @@ class CategorySocketService {
   static void subscribe(
     void Function(List<Category>) listener,
   ) {
-    _listeners.add(listener);
+    if (!_listeners.contains(listener)) {
+      print('➕ CATEGORY SUBSCRIBER ADDED');
+      _listeners.add(listener);
+    }
 
     // 🔥 INSTANT REPLAY FOR LATE SUBSCRIBERS
     if (_cachedCategories.isNotEmpty) {
+      print(
+        '⏪ REPLAYING ${_cachedCategories.length} cached categories',
+      );
       listener(_cachedCategories);
     }
   }
@@ -95,6 +120,7 @@ class CategorySocketService {
   static void unsubscribe(
     void Function(List<Category>) listener,
   ) {
+    print('➖ CATEGORY SUBSCRIBER REMOVED');
     _listeners.remove(listener);
   }
 
@@ -110,6 +136,7 @@ class CategorySocketService {
   /* ================================================= */
 
   static void disconnect() {
+    print('🧹 CATEGORY SOCKET DISCONNECT');
     _listeners.clear();
     _cachedCategories = [];
     _socket?.disconnect();

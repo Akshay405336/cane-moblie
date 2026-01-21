@@ -5,10 +5,12 @@ import '../theme/home_text_styles.dart';
 
 class CategoryListWidget extends StatelessWidget {
   final List<Category> categories;
+  final void Function(Category category)? onTap;
 
   const CategoryListWidget({
     super.key,
     required this.categories,
+    this.onTap,
   });
 
   @override
@@ -20,14 +22,15 @@ class CategoryListWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: HomeSpacing.sm),
       child: SizedBox(
-        height: 104, // ✅ extra space for shadow (NO overflow)
+        height: 104, // space for shadow
         child: ListView.separated(
+          key: const PageStorageKey('category-list'),
           scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none, // ✅ prevents shadow clipping
+          clipBehavior: Clip.none,
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: HomeSpacing.md,
-            vertical: 6, // ✅ breathing room for bottom shadow
+            vertical: 6,
           ),
           itemCount: categories.length,
           separatorBuilder: (_, __) =>
@@ -36,9 +39,13 @@ class CategoryListWidget extends StatelessWidget {
             final category = categories[index];
 
             return CategoryIconTile(
+              key: ValueKey(category.id), // 🔒 stable on realtime update
               name: category.name,
               icon: _CategoryStyle.iconFor(category.id),
               iconColor: _CategoryStyle.iconColorFor(category.id),
+              onTap: onTap == null
+                  ? null
+                  : () => onTap!(category),
             );
           },
         ),
@@ -48,62 +55,68 @@ class CategoryListWidget extends StatelessWidget {
 }
 
 /* ================================================= */
-/* CATEGORY ICON TILE (BOTTOM SHADOW SAFE)            */
+/* CATEGORY ICON TILE                                */
 /* ================================================= */
 
 class CategoryIconTile extends StatelessWidget {
   final String name;
   final IconData icon;
   final Color iconColor;
+  final VoidCallback? onTap;
 
   const CategoryIconTile({
     super.key,
     required this.name,
     required this.icon,
     required this.iconColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 74,
-      padding: const EdgeInsets.symmetric(
-        vertical: 10,
-        horizontal: 6,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06), // ✅ soft
-            offset: const Offset(3, 7), // ✅ bottom only
-            blurRadius: 8,
-            spreadRadius: -2, // ✅ no top/side shadow
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 26,
-            color: iconColor,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: HomeTextStyles.body.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 74,
+        padding: const EdgeInsets.symmetric(
+          vertical: 10,
+          horizontal: 6,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              offset: const Offset(3, 7),
+              blurRadius: 8,
+              spreadRadius: -2,
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 26,
+              color: iconColor,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: HomeTextStyles.body.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -140,7 +153,8 @@ class _CategoryStyle {
   }
 
   static Color iconColorFor(String seed) {
-    final index = seed.hashCode.abs() % _iconColors.length;
+    final index =
+        seed.hashCode.abs() % _iconColors.length;
     return _iconColors[index];
   }
 }
