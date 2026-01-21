@@ -17,19 +17,22 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(HomeSpacing.radiusLg),
+      borderRadius:
+          BorderRadius.circular(HomeSpacing.radiusLg),
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ProductDetailsScreen(product: product),
+            builder: (_) =>
+                ProductDetailsScreen(product: product),
           ),
         );
       },
       child: Container(
         decoration: BoxDecoration(
           color: HomeColors.pureWhite,
-          borderRadius: BorderRadius.circular(HomeSpacing.radiusLg),
+          borderRadius:
+              BorderRadius.circular(HomeSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.06),
@@ -41,27 +44,53 @@ class ProductCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // ✅ IMPORTANT
+          mainAxisSize: MainAxisSize.min,
           children: [
             /* ================= IMAGE STACK ================= */
 
             Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(HomeSpacing.sm),
+                  padding:
+                      const EdgeInsets.all(HomeSpacing.sm),
                   child: ClipRRect(
                     borderRadius:
-                        BorderRadius.circular(HomeSpacing.radiusMd),
+                        BorderRadius.circular(
+                            HomeSpacing.radiusMd),
                     child: SizedBox(
                       height: 120,
                       width: double.infinity,
                       child: Image.network(
-                        product.mainImage,
+                        // 🔥 FIX: FULL URL
+                        product.mainImageUrl,
                         fit: BoxFit.cover,
+                        loadingBuilder:
+                            (context, child, progress) {
+                          if (progress == null)
+                            return child;
+                          return const Center(
+                            child:
+                                CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: HomeColors.primaryGreen,
+                            ),
+                          );
+                        },
+                        errorBuilder:
+                            (_, __, ___) => const Center(
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 28,
+                            color:
+                                HomeColors.textLightGrey,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
+
+                /* TRENDING BADGE */
 
                 if (product.isTrending)
                   Positioned(
@@ -81,16 +110,19 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
+                /* ADD BUTTON */
+
                 Positioned(
                   bottom: 14,
                   right: 14,
                   child: Container(
                     height: 28,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10),
                     decoration: BoxDecoration(
                       color: HomeColors.pureWhite,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius:
+                          BorderRadius.circular(6),
                       border: Border.all(
                         color: HomeColors.primaryGreen,
                         width: 1.2,
@@ -100,7 +132,8 @@ class ProductCard extends StatelessWidget {
                     child: const Text(
                       '+ ADD',
                       style: TextStyle(
-                        color: HomeColors.primaryGreen,
+                        color:
+                            HomeColors.primaryGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -117,11 +150,12 @@ class ProductCard extends StatelessWidget {
                 HomeSpacing.sm,
                 0,
                 HomeSpacing.sm,
-                0, // ✅ ZERO bottom padding
+                0,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min, // ✅ IMPORTANT
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   /* PRICE ROW */
 
@@ -134,8 +168,11 @@ class ProductCard extends StatelessWidget {
                       if (product.hasDiscount)
                         Text(
                           '₹${product.originalPrice.toStringAsFixed(0)}',
-                          style: HomeTextStyles.originalPrice.copyWith(
-                            color: HomeColors.textGrey,
+                          style: HomeTextStyles
+                              .originalPrice
+                              .copyWith(
+                            color:
+                                HomeColors.textGrey,
                           ),
                         ),
                     ],
@@ -143,7 +180,7 @@ class ProductCard extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  /* 21% OFF ------- */
+                  /* DISCOUNT */
 
                   if (product.hasDiscount)
                     Row(
@@ -151,13 +188,17 @@ class ProductCard extends StatelessWidget {
                         Text(
                           '${product.discountPercent}% OFF',
                           style: const TextStyle(
-                            color: HomeColors.primaryGreen,
+                            color:
+                                HomeColors.primaryGreen,
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight:
+                                FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Expanded(child: _DottedLine()),
+                        const Expanded(
+                          child: _DottedLine(),
+                        ),
                       ],
                     ),
 
@@ -168,13 +209,16 @@ class ProductCard extends StatelessWidget {
                   Text(
                     product.name,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: HomeTextStyles.productName.copyWith(
-                      height: 1.25, // ✅ tighter
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style: HomeTextStyles
+                        .productName
+                        .copyWith(
+                      height: 1.25,
                     ),
                   ),
 
-                  const SizedBox(height: 2), // ✅ minimal only
+                  const SizedBox(height: 2),
                 ],
               ),
             ),
@@ -198,7 +242,8 @@ class _GreenPricePill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: HomeColors.primaryGreen,
         borderRadius: BorderRadius.circular(6),
@@ -217,7 +262,7 @@ class _GreenPricePill extends StatelessWidget {
 }
 
 /* ================================================= */
-/* DOTTED LINE (INLINE)                              */
+/* DOTTED LINE                                       */
 /* ================================================= */
 
 class _DottedLine extends StatelessWidget {
@@ -236,9 +281,10 @@ class _DottedLine extends StatelessWidget {
               child: Container(
                 height: 1,
                 margin:
-                    const EdgeInsets.symmetric(horizontal: 1),
-                color:
-                    HomeColors.primaryGreen.withOpacity(0.4),
+                    const EdgeInsets.symmetric(
+                        horizontal: 1),
+                color: HomeColors.primaryGreen
+                    .withOpacity(0.4),
               ),
             ),
           ),

@@ -5,13 +5,16 @@ import '../theme/home_spacing.dart';
 /// Product image gallery
 /// Used only in ProductDetailsScreen
 class ProductImageGallery extends StatefulWidget {
-  final String mainImage;
-  final List<String> galleryImages;
+  /// ✅ FULL URL
+  final String mainImageUrl;
+
+  /// ✅ FULL URLs
+  final List<String> galleryImageUrls;
 
   const ProductImageGallery({
     super.key,
-    required this.mainImage,
-    required this.galleryImages,
+    required this.mainImageUrl,
+    required this.galleryImageUrls,
   });
 
   @override
@@ -24,22 +27,23 @@ class _ProductImageGalleryState
   late final List<String> _images;
   int _currentIndex = 0;
 
-  /// Show gallery ONLY if valid gallery images exist
   bool get _hasGallery => _images.length > 1;
 
   @override
   void initState() {
     super.initState();
 
-    /// Remove empty / invalid gallery images
-    final validGalleryImages = widget.galleryImages
-        .where((url) => url.trim().isNotEmpty)
+    /// Remove empty & duplicate images
+    final uniqueGalleryImages = widget.galleryImageUrls
+        .where((url) =>
+            url.trim().isNotEmpty &&
+            url != widget.mainImageUrl)
         .toList();
 
     /// MAIN IMAGE ALWAYS FIRST
     _images = [
-      widget.mainImage,
-      ...validGalleryImages,
+      widget.mainImageUrl,
+      ...uniqueGalleryImages,
     ];
   }
 
@@ -98,24 +102,7 @@ class _ProductImageGalleryState
         });
       },
       itemBuilder: (context, index) {
-        return Image.network(
-          _images[index],
-          fit: BoxFit.cover,
-          loadingBuilder:
-              (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: HomeColors.primaryGreen,
-              ),
-            );
-          },
-          errorBuilder: (_, __, ___) => const Icon(
-            Icons.broken_image,
-            color: HomeColors.textLightGrey,
-          ),
-        );
+        return _NetworkImage(url: _images[index]);
       },
     );
   }
@@ -123,11 +110,25 @@ class _ProductImageGalleryState
   /* ================= SINGLE IMAGE ================= */
 
   Widget _buildSingleImage() {
+    return _NetworkImage(url: _images.first);
+  }
+}
+
+/* ================================================= */
+/* NETWORK IMAGE (REUSABLE & SAFE)                    */
+/* ================================================= */
+
+class _NetworkImage extends StatelessWidget {
+  final String url;
+
+  const _NetworkImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
     return Image.network(
-      _images.first,
+      url,
       fit: BoxFit.cover,
-      loadingBuilder:
-          (context, child, loadingProgress) {
+      loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return const Center(
           child: CircularProgressIndicator(
@@ -136,16 +137,19 @@ class _ProductImageGalleryState
           ),
         );
       },
-      errorBuilder: (_, __, ___) => const Icon(
-        Icons.broken_image,
-        color: HomeColors.textLightGrey,
+      errorBuilder: (_, __, ___) => const Center(
+        child: Icon(
+          Icons.broken_image,
+          size: 32,
+          color: HomeColors.textLightGrey,
+        ),
       ),
     );
   }
 }
 
 /* ================================================= */
-/* INDICATOR DOT                                    */
+/* INDICATOR DOT                                     */
 /* ================================================= */
 
 class _IndicatorDot extends StatelessWidget {

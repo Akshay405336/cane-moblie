@@ -22,7 +22,8 @@ class CategoryListWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: HomeSpacing.sm),
       child: SizedBox(
-        height: 104, // space for shadow
+        // 🔥 Only list has fixed height — tiles are adaptive
+        height: 120,
         child: ListView.separated(
           key: const PageStorageKey('category-list'),
           scrollDirection: Axis.horizontal,
@@ -30,7 +31,7 @@ class CategoryListWidget extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: HomeSpacing.md,
-            vertical: 6,
+            vertical: 8,
           ),
           itemCount: categories.length,
           separatorBuilder: (_, __) =>
@@ -39,10 +40,8 @@ class CategoryListWidget extends StatelessWidget {
             final category = categories[index];
 
             return CategoryIconTile(
-              key: ValueKey(category.id), // 🔒 stable on realtime update
-              name: category.name,
-              icon: _CategoryStyle.iconFor(category.id),
-              iconColor: _CategoryStyle.iconColorFor(category.id),
+              key: ValueKey(category.id),
+              category: category,
               onTap: onTap == null
                   ? null
                   : () => onTap!(category),
@@ -55,32 +54,33 @@ class CategoryListWidget extends StatelessWidget {
 }
 
 /* ================================================= */
-/* CATEGORY ICON TILE                                */
+/* CATEGORY ICON TILE (ADAPTIVE HEIGHT)               */
 /* ================================================= */
 
 class CategoryIconTile extends StatelessWidget {
-  final String name;
-  final IconData icon;
-  final Color iconColor;
+  final Category category;
   final VoidCallback? onTap;
 
   const CategoryIconTile({
     super.key,
-    required this.name,
-    required this.icon,
-    required this.iconColor,
+    required this.category,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final icon =
+        _CategoryStyle.iconFor(category.id);
+    final iconColor =
+        _CategoryStyle.iconColorFor(category.id);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 74,
         padding: const EdgeInsets.symmetric(
-          vertical: 10,
+          vertical: 8,
           horizontal: 6,
         ),
         decoration: BoxDecoration(
@@ -96,28 +96,71 @@ class CategoryIconTile extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min, // 🔥 adaptive
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 26,
-              color: iconColor,
+            _CategoryIcon(
+              imageUrl: category.imageUrl,
+              icon: icon,
+              iconColor: iconColor,
             ),
             const SizedBox(height: 6),
             Text(
-              name,
+              category.name,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: HomeTextStyles.body.copyWith(
                 fontSize: 12,
+                height: 1.1,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/* ================================================= */
+/* IMAGE / ICON SWITCH                               */
+/* ================================================= */
+
+class _CategoryIcon extends StatelessWidget {
+  final String? imageUrl;
+  final IconData icon;
+  final Color iconColor;
+
+  const _CategoryIcon({
+    required this.imageUrl,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          imageUrl!,
+          width: 42,
+          height: 42,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            icon,
+            size: 26,
+            color: iconColor,
+          ),
+        ),
+      );
+    }
+
+    return Icon(
+      icon,
+      size: 26,
+      color: iconColor,
     );
   }
 }

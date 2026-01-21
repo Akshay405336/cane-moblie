@@ -30,13 +30,9 @@ class _ProductDetailsScreenState
   void initState() {
     super.initState();
 
-    // Initial product
     _product = widget.product;
 
-    // Subscribe to realtime updates
     ProductSocketService.subscribe(_onProducts);
-
-    // Ensure socket is connected
     ProductSocketService.connect();
   }
 
@@ -94,9 +90,11 @@ class _ProductDetailsScreenState
             /* ================= IMAGE GALLERY ================= */
 
             ProductImageGallery(
-              key: ValueKey(_product.mainImage),
-              mainImage: _product.mainImage,
-              galleryImages: _product.galleryImages,
+              // 🔥 KEY FIXES
+              key: ValueKey(_product.mainImageUrl),
+              mainImageUrl: _product.mainImageUrl,
+              galleryImageUrls:
+                  _product.galleryImageUrls,
             ),
 
             const SizedBox(height: HomeSpacing.md),

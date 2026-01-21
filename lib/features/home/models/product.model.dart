@@ -1,3 +1,4 @@
+import '../../../env.dart';
 import 'category.model.dart';
 import 'product_unit.model.dart';
 import 'product_rating.model.dart';
@@ -15,6 +16,7 @@ class Product {
   final double originalPrice;
   final double? discountPrice;
 
+  /// Relative paths from backend
   final String mainImage;
   final List<String> galleryImages;
 
@@ -99,6 +101,21 @@ class Product {
           json['trendState']['trending'] as bool,
     );
   }
+
+  /* ================================================= */
+  /* 🔥 IMAGE URL HELPERS (FIX)                         */
+  /* ================================================= */
+
+  /// Full URL for main image
+  String get mainImageUrl =>
+      '${Env.baseUrl}/$mainImage';
+
+  /// Full URLs for gallery images
+  List<String> get galleryImageUrls =>
+      galleryImages
+          .where((e) => e.isNotEmpty)
+          .map((e) => '${Env.baseUrl}/$e')
+          .toList();
 
   /* ================================================= */
   /* UI HELPERS                                        */

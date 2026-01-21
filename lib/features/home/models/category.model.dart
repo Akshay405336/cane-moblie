@@ -1,3 +1,5 @@
+import '../../../env.dart';
+
 /// Public Category model
 /// Used for HOME / EXPLORE / Product mapping
 class Category {
@@ -25,6 +27,15 @@ class Category {
       'name': name,
       if (imagePath != null) 'imagePath': imagePath,
     };
+  }
+
+  /// 🔥 FULL IMAGE URL FOR FLUTTER UI
+  String? get imageUrl {
+    if (imagePath == null || imagePath!.isEmpty) {
+      return null;
+    }
+
+    return '${Env.baseUrl}/$imagePath';
   }
 
   Category copyWith({
