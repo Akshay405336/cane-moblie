@@ -11,9 +11,12 @@ import 'location_tiles.dart';
 
 class LocationBottomSheet extends StatefulWidget {
   final Future<void> Function() onUseCurrentLocation;
+
   final void Function({
     required String id,
     required String address,
+    double? lat,
+    double? lng,
   }) onSelectSavedAddress;
 
   const LocationBottomSheet({
@@ -30,7 +33,9 @@ class LocationBottomSheet extends StatefulWidget {
 class _LocationBottomSheetState extends State<LocationBottomSheet>
     with WidgetsBindingObserver {
   late Future<List<SavedAddress>> _future;
-  bool _locationServiceOn = true;
+
+  // ⭐ ONLY service state (not permission)
+  bool _gpsEnabled = true;
 
   @override
   void initState() {
@@ -45,25 +50,44 @@ class _LocationBottomSheetState extends State<LocationBottomSheet>
     super.dispose();
   }
 
+  /* ================================================= */
+  /* LOAD DATA                                         */
+  /* ================================================= */
+
   Future<void> _load() async {
     _future = SavedAddressStorage.getAll();
-    _locationServiceOn =
-        await LocationHelper.canUseLocationSilently();
+
+    // ⭐ ONLY check GPS service
+    _gpsEnabled = await LocationHelper.isGpsEnabled();
+
     if (mounted) setState(() {});
   }
 
-  /// ✅ Auto close sheet when returning from settings
+  /* ================================================= */
+  /* RESUME FROM SETTINGS                              */
+  /* ================================================= */
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state != AppLifecycleState.resumed) return;
 
-    final enabled =
-        await LocationHelper.canUseLocationSilently();
+    final enabled = await LocationHelper.isGpsEnabled();
 
+    if (mounted) {
+      setState(() {
+        _gpsEnabled = enabled;
+      });
+    }
+
+    // close sheet automatically if turned ON
     if (enabled && mounted) {
       Navigator.pop(context);
     }
   }
+
+  /* ================================================= */
+  /* UI                                                */
+  /* ================================================= */
 
   @override
   Widget build(BuildContext context) {
@@ -77,109 +101,83 @@ class _LocationBottomSheetState extends State<LocationBottomSheet>
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: AnimatedBuilder(
-        animation: LocationStateNotifier.instance,
-        builder: (context, _) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const BottomSheetHandle(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const BottomSheetHandle(),
+          const SizedBox(height: 24),
+
+          /// 🔄 Detecting
+          if (LocationState.isDetecting)
+            const LocationFetchingTile()
+
+          else ...[
+            /// 🔴 GPS OFF
+            if (!_gpsEnabled)
+              LocationPermissionOffTile(
+                onEnable: widget.onUseCurrentLocation,
+              ),
+
+            /// 🟢 GPS ON
+            if (_gpsEnabled)
+              CurrentLocationTile(
+                isDetecting: false,
+                onTap: widget.onUseCurrentLocation,
+              ),
+
+            /// SAVED ADDRESSES
+            if (AuthState.isAuthenticated) ...[
               const SizedBox(height: 24),
+              const SectionTitle(text: 'Saved addresses'),
+              const SizedBox(height: 12),
 
-              /// 🔄 Detecting GPS
-              if (LocationState.isDetecting)
-                const LocationFetchingTile()
-
-              else ...[
-                /// 🔴 LOCATION OFF → SHOW ENABLE + OTHERS
-                if (!_locationServiceOn)
-                  LocationPermissionOffTile(
-                    onEnable: widget.onUseCurrentLocation,
-                  ),
-
-                /// 🟢 LOCATION ON → USE CURRENT LOCATION
-                if (_locationServiceOn) ...[
-                  CurrentLocationTile(
-                    isDetecting: false,
-                    onTap: widget.onUseCurrentLocation,
-                  ),
-                ],
-
-                /// SAVED ADDRESSES (ONLY LOGGED IN)
-                if (AuthState.isAuthenticated) ...[
-                  const SizedBox(height: 24),
-                  const SectionTitle(text: 'Saved addresses'),
-                  const SizedBox(height: 12),
-                  SavedAddressList(
-                    future: _future,
-                    onSelect: widget.onSelectSavedAddress,
-                  ),
-                ],
-
-                const Spacer(),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-
-                /// SEARCH MANUALLY (ALWAYS AVAILABLE)
-                InkWell(
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const AddAddressScreen(),
-                      ),
-                    );
-                    setState(() {
-                      _future =
-                          SavedAddressStorage.getAll();
-                    });
-                  },
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.search,
-                        color: Color(0xFF03B602),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Search manually',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF03B602),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              SavedAddressList(
+                future: _future,
+                onSelect: (addr) {
+                  widget.onSelectSavedAddress(
+                    id: addr.id,
+                    address: addr.address,
+                    lat: addr.lat,
+                    lng: addr.lng,
+                  );
+                },
+              ),
             ],
-          );
-        },
+
+            const Spacer(),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+
+            /// SEARCH MANUALLY
+            InkWell(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const AddAddressScreen(),
+                  ),
+                );
+
+                _load();
+              },
+              child: Row(
+                children: const [
+                  Icon(Icons.search, color: Color(0xFF03B602)),
+                  SizedBox(width: 8),
+                  Text(
+                    'Search manually',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF03B602),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
-  }
-}
-
-/// --------------------------------------------------
-/// CLEAN NOTIFIER (NO INFINITE LOOP)
-/// --------------------------------------------------
-class LocationStateNotifier extends ChangeNotifier {
-  LocationStateNotifier._() {
-    _sync();
-  }
-
-  static final instance = LocationStateNotifier._();
-
-  bool _last = LocationState.isDetecting;
-
-  void _sync() async {
-    while (true) {
-      await Future.delayed(const Duration(milliseconds: 200));
-      if (_last != LocationState.isDetecting) {
-        _last = LocationState.isDetecting;
-        notifyListeners();
-      }
-    }
   }
 }

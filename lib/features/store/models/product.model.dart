@@ -1,5 +1,5 @@
 import '../../../env.dart';
-import 'category.model.dart';
+import '../../home/models/category.model.dart';
 import 'product_unit.model.dart';
 import 'product_rating.model.dart';
 
@@ -8,15 +8,17 @@ import 'product_rating.model.dart';
 class Product {
   final String id;
 
+  /// backend no longer sends category
   final Category category;
 
   final String name;
   final String slug;
 
+  /// backend sends single "price"
   final double originalPrice;
   final double? discountPrice;
 
-  /// Relative paths from backend
+  /// backend sends "image"
   final String mainImage;
   final List<String> galleryImages;
 
@@ -47,70 +49,56 @@ class Product {
   });
 
   /* ================================================= */
-  /* JSON → PRODUCT                                    */
+  /* JSON → PRODUCT  ⭐ FIXED FOR PUBLIC API            */
   /* ================================================= */
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      id: json['id'] as String,
+  return Product(
+    id: json['id'] as String,
 
-      category: Category.fromJson(
-        json['category'],
-      ),
+    /// backend doesn't send category
+    category: Category.empty(),
 
-      name: json['name']['value'] as String,
-      slug: json['slug']['value'] as String,
+    name: json['name'] as String,
+    slug: json['slug'] as String,
 
-      originalPrice:
-          (json['price']['originalPrice'] as num)
-              .toDouble(),
+    /// ⭐ SAFE parsing (handles "90" or 90)
+    originalPrice:
+        double.parse(json['price'].toString()),
+    discountPrice: null,
 
-      discountPrice:
-          json['price']['discountPrice'] != null
-              ? (json['price']['discountPrice'] as num)
-                  .toDouble()
-              : null,
+    mainImage: json['image'] ?? '',
 
-      mainImage:
-          json['images']['mainImage'] as String,
+    galleryImages:
+        List<String>.from(json['galleryImages'] ?? []),
 
-      galleryImages:
-          (json['images']['galleryImages'] as List)
-              .map((e) => e as String)
-              .toList(),
+    unit: ProductUnit(
+      value: json['unitValue'] ?? 0,
+      type: json['unitType'] ?? '',
+    ),
 
-      unit: ProductUnit.fromJson(
-        json['unit'],
-      ),
+    tags: List<String>.from(json['tags'] ?? []),
 
-      tags: List<String>.from(
-        json['tags'] ?? [],
-      ),
+    rating: ProductRating(
+      average: double.parse(
+          json['ratingAverage'].toString()),
+      count: json['ratingCount'] ?? 0,
+    ),
 
-      rating: ProductRating.fromJson(
-        json['rating'],
-      ),
+    shortDescription: json['shortDescription'],
+    longDescription: json['longDescription'],
 
-      shortDescription:
-          json['shortDescription'] as String?,
-
-      longDescription:
-          json['longDescription'] as String?,
-
-      isTrending:
-          json['trendState']['trending'] as bool,
-    );
-  }
+    isTrending: json['isTrending'] ?? false,
+  );
+}
 
   /* ================================================= */
-  /* 🔥 IMAGE URL HELPERS (FIX)                         */
+  /* IMAGE HELPERS                                     */
   /* ================================================= */
 
-  /// Full URL for main image
   String get mainImageUrl =>
       '${Env.baseUrl}/$mainImage';
 
-  /// Full URLs for gallery images
   List<String> get galleryImageUrls =>
       galleryImages
           .where((e) => e.isNotEmpty)

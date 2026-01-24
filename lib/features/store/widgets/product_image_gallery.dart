@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/home_colors.dart';
-import '../theme/home_spacing.dart';
+import '../../home/theme/home_colors.dart';
+import '../../home/theme/home_spacing.dart';
 
 /// Product image gallery
 /// Used only in ProductDetailsScreen

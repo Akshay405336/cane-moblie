@@ -10,11 +10,19 @@ class SavedAddress {
   final String label;
   final String address;
 
+  // ⭐ NEW
+  final double? lat;
+  final double? lng;
+
   const SavedAddress({
     required this.id,
     required this.type,
     required this.label,
     required this.address,
+
+    // ⭐ NEW
+    this.lat,
+    this.lng,
   });
 
   // ------------------------------
@@ -25,12 +33,18 @@ class SavedAddress {
     String? label,
     String? address,
     SavedAddressType? type,
+
+    // ⭐ NEW
+    double? lat,
+    double? lng,
   }) {
     return SavedAddress(
       id: id,
       type: type ?? this.type,
       label: label ?? this.label,
       address: address ?? this.address,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
     );
   }
 
@@ -38,7 +52,6 @@ class SavedAddress {
   // UI HELPERS
   // ------------------------------
 
-  /// Highlight selected saved address
   bool isActive(String? activeSavedAddressId) {
     return activeSavedAddressId != null &&
         activeSavedAddressId == id;
@@ -53,6 +66,10 @@ class SavedAddress {
         'type': type.name,
         'label': label,
         'address': address,
+
+        // ⭐ NEW
+        'lat': lat,
+        'lng': lng,
       };
 
   factory SavedAddress.fromJson(Map<String, dynamic> json) {
@@ -68,11 +85,15 @@ class SavedAddress {
       type: resolvedType,
       label: json['label']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
+
+      // ⭐ NEW
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
     );
   }
 
   // ------------------------------
-  // EQUALITY (IMPORTANT FOR UI)
+  // EQUALITY
   // ------------------------------
 
   @override

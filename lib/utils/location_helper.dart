@@ -1,15 +1,27 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+/// ===============================================================
+/// DTO
+/// ===============================================================
+class CurrentLocationData {
+  final String address;
+  final double latitude;
+  final double longitude;
+
+  const CurrentLocationData({
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+  });
+}
+
 class LocationHelper {
   LocationHelper._();
 
-  // ===============================================================
-  // SILENT CHECK (APP START / RESUME)
-  // ❌ No permission dialog
-  // ❌ No settings screen
-  // ❌ NO GPS FETCH
-  // ===============================================================
+  /* =============================================================== */
+  /* SILENT CHECK (no permission popup)                               */
+  /* =============================================================== */
 
   static Future<bool> canUseLocationSilently() async {
     final permission = await Geolocator.checkPermission();
@@ -22,11 +34,9 @@ class LocationHelper {
     return Geolocator.isLocationServiceEnabled();
   }
 
-  // ===============================================================
-  // USER-TRIGGERED PERMISSION FLOW (BUTTON CLICK ONLY)
-  // ✅ Permission dialog allowed
-  // ❌ NO GPS FETCH
-  // ===============================================================
+  /* =============================================================== */
+  /* REQUEST PERMISSION (user triggered only)                         */
+  /* =============================================================== */
 
   static Future<bool> requestPermissionFromUser() async {
     LocationPermission permission =
@@ -36,18 +46,13 @@ class LocationHelper {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return false;
-    }
-
-    return true;
+    return permission != LocationPermission.denied &&
+        permission != LocationPermission.deniedForever;
   }
 
-  // ===============================================================
-  // USER-TRIGGERED SERVICE ENABLE FLOW
-  // ✅ Opens system location settings
-  // ===============================================================
+  /* =============================================================== */
+  /* ENSURE GPS SERVICE ENABLED                                       */
+  /* =============================================================== */
 
   static Future<bool> ensureLocationServiceEnabled() async {
     final enabled = await Geolocator.isLocationServiceEnabled();
@@ -56,16 +61,40 @@ class LocationHelper {
 
     await Geolocator.openLocationSettings();
 
-    // Re-check after returning from settings
     return Geolocator.isLocationServiceEnabled();
   }
 
-  // ===============================================================
-  // FETCH CURRENT ADDRESS
-  // 🚨 CALL ONLY AFTER USER CLICK + PERMISSION + SERVICE OK
-  // ===============================================================
+  /* =============================================================== */
+  /* ⭐ GEOCODE TEXT ADDRESS → COORDS                                  */
+  /* =============================================================== */
 
-  static Future<String> fetchCurrentAddress() async {
+  static Future<CurrentLocationData?> geocodeAddress(
+    String address,
+  ) async {
+    try {
+      final list = await locationFromAddress(address);
+
+      if (list.isEmpty) return null;
+
+      final loc = list.first;
+
+      return CurrentLocationData(
+        address: address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /* =============================================================== */
+  /* ⭐ FETCH GPS LOCATION (ADDRESS + COORDS)                          */
+  /* CALL ONLY AFTER USER PERMISSION + SERVICE OK                      */
+  /* =============================================================== */
+
+  static Future<CurrentLocationData?>
+      fetchCurrentLocationData() async {
     try {
       final permission = await Geolocator.checkPermission();
       final serviceEnabled =
@@ -74,11 +103,11 @@ class LocationHelper {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever ||
           !serviceEnabled) {
-        return '';
+        return null;
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
+        desiredAccuracy: LocationAccuracy.high, // ⭐ better
         timeLimit: const Duration(seconds: 10),
       );
 
@@ -87,27 +116,41 @@ class LocationHelper {
         position.longitude,
       );
 
-      if (placemarks.isEmpty) return '';
+      String address = '';
 
-      final place = placemarks.first;
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
 
-      return [
-        place.subLocality,
-        place.locality,
-        place.administrativeArea,
-      ]
-          .whereType<String>()
-          .where((e) => e.isNotEmpty)
-          .join(', ');
+        address = [
+          place.subLocality,
+          place.locality,
+          place.administrativeArea,
+        ]
+            .whereType<String>()
+            .where((e) => e.isNotEmpty)
+            .join(', ');
+      }
+
+      // ⭐ fallback (never empty)
+      if (address.isEmpty) {
+        address =
+            'Lat ${position.latitude.toStringAsFixed(4)}, '
+            'Lng ${position.longitude.toStringAsFixed(4)}';
+      }
+
+      return CurrentLocationData(
+        address: address,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
     } catch (_) {
-      // 🔐 Never crash location flow
-      return '';
+      return null; // never crash
     }
   }
 
-  // ===============================================================
-  // SIMPLE GPS SERVICE CHECK (UI ONLY)
-  // ===============================================================
+  /* =============================================================== */
+  /* SIMPLE GPS CHECK (UI ONLY)                                       */
+  /* =============================================================== */
 
   static Future<bool> isGpsEnabled() async {
     return Geolocator.isLocationServiceEnabled();

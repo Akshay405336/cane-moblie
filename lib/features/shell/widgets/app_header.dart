@@ -21,9 +21,6 @@ class AppHeader extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    /// 🔐 SAFETY NET
-    LocationHeaderController.instance.sync();
-
     return ValueListenableBuilder<LocationHeaderState>(
       valueListenable: LocationHeaderController.instance,
       builder: (context, state, _) {
@@ -33,18 +30,23 @@ class AppHeader extends StatelessWidget
 
         return AppBar(
           elevation: 0,
-          backgroundColor: const Color(0xFFE6F4EA), // ✅ MATCH HOME
-          
+          backgroundColor: const Color(0xFFE6F4EA),
+
           /* ================= LOCATION ================= */
 
           title: InkWell(
             borderRadius: BorderRadius.circular(12),
+
+            /// ⭐ disable when detecting
             onTap:
-                (!isDetecting && hasLocation) ? onLocationTap : null,
+                (!isDetecting) ? onLocationTap : null,
+
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 6),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Delivering to',
@@ -64,17 +66,21 @@ class AppHeader extends StatelessWidget
                         color: Color(0xFF43A047),
                       ),
                       const SizedBox(width: 6),
+
                       Flexible(
                         child: AnimatedSwitcher(
-                          duration:
-                              const Duration(milliseconds: 250),
+                          duration: const Duration(
+                              milliseconds: 250),
                           child: isDetecting
                               ? _locationShimmer()
                               : Text(
-                                  LocationState.address,
+                                  hasLocation
+                                      ? LocationState
+                                          .address
+                                      : 'Select location',
                                   key: ValueKey(
-                                    LocationState.address,
-                                  ),
+                                      LocationState
+                                          .address),
                                   maxLines: 1,
                                   overflow:
                                       TextOverflow.ellipsis,
@@ -90,7 +96,8 @@ class AppHeader extends StatelessWidget
                       ),
                       const SizedBox(width: 4),
                       const Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                        Icons
+                            .keyboard_arrow_down_rounded,
                         color: Color(0xFF558B2F),
                       ),
                     ],
@@ -100,13 +107,15 @@ class AppHeader extends StatelessWidget
             ),
           ),
 
-          /* ================= PROFILE ICON ================= */
+          /* ================= PROFILE ================= */
 
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding:
+                  const EdgeInsets.only(right: 12),
               child: InkWell(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius:
+                    BorderRadius.circular(22),
                 onTap: () async {
                   if (!isLoggedIn) {
                     final result =
@@ -114,7 +123,8 @@ class AppHeader extends StatelessWidget
                       context,
                       AppRoutes.login,
                     );
-                    if (result == true) onAuthChanged();
+                    if (result == true)
+                      onAuthChanged();
                     return;
                   }
 
@@ -127,13 +137,15 @@ class AppHeader extends StatelessWidget
                   height: 40,
                   width: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white, // ✅ WHITE BG
+                    color: Colors.white,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.10),
+                        color:
+                            Colors.black.withOpacity(0.10),
                         blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        offset:
+                            const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -142,7 +154,8 @@ class AppHeader extends StatelessWidget
                         ? Icons.account_circle
                         : Icons.person,
                     size: 22,
-                    color: const Color(0xFF03B602), // ✅ SAME GREEN AS HOME ICON
+                    color:
+                        const Color(0xFF03B602),
                   ),
                 ),
               ),
@@ -153,9 +166,9 @@ class AppHeader extends StatelessWidget
     );
   }
 
-  // --------------------------------------------------
-  // SHIMMER
-  // --------------------------------------------------
+  /* -------------------------------------------------- */
+  /* SHIMMER                                             */
+  /* -------------------------------------------------- */
 
   Widget _locationShimmer() {
     return Shimmer.fromColors(
@@ -166,18 +179,22 @@ class AppHeader extends StatelessWidget
         width: 140,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius:
+              BorderRadius.circular(6),
         ),
       ),
     );
   }
 }
 
-/// ==================================================
-/// HEADER STATE (IMMUTABLE)
-/// ==================================================
+/* ================================================== */
+/* HEADER STATE                                       */
+/* ================================================== */
+
 class LocationHeaderState {
   final bool isDetecting;
+
+  /// ⭐ now depends on coordinates (not just text)
   final bool hasLocation;
 
   const LocationHeaderState({
@@ -186,9 +203,10 @@ class LocationHeaderState {
   });
 }
 
-/// ==================================================
-/// SINGLE SOURCE OF TRUTH (NO POLLING)
-/// ==================================================
+/* ================================================== */
+/* CONTROLLER                                         */
+/* ================================================== */
+
 class LocationHeaderController
     extends ValueNotifier<LocationHeaderState> {
   LocationHeaderController._()
@@ -196,17 +214,17 @@ class LocationHeaderController
           LocationHeaderState(
             isDetecting: LocationState.isDetecting,
             hasLocation:
-                LocationState.hasPersistedLocation,
+                LocationState.hasCoordinates,
           ),
         );
 
-  static final instance = LocationHeaderController._();
+  static final instance =
+      LocationHeaderController._();
 
   void sync() {
     value = LocationHeaderState(
       isDetecting: LocationState.isDetecting,
-      hasLocation:
-          LocationState.hasPersistedLocation,
+      hasLocation: LocationState.hasCoordinates,
     );
   }
 }

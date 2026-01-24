@@ -44,7 +44,7 @@ class SectionTitle extends StatelessWidget {
 }
 
 /// =====================================================
-/// LOCATION OFF — HORIZONTAL BANNER
+/// LOCATION OFF / PERMISSION REQUIRED
 /// =====================================================
 class LocationPermissionOffTile extends StatelessWidget {
   final VoidCallback onEnable;
@@ -59,16 +59,15 @@ class LocationPermissionOffTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          /// ICON (LEFT)
           Container(
             width: 44,
             height: 44,
@@ -82,17 +81,15 @@ class LocationPermissionOffTile extends StatelessWidget {
               size: 22,
             ),
           ),
-
           const SizedBox(width: 12),
 
-          /// TEXT (CENTER)
-          Expanded(
+          /// text
+          const Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Location is off',
+                  'Location access required',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -100,7 +97,7 @@ class LocationPermissionOffTile extends StatelessWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Enable location for accurate delivery and nearby stores',
+                  'Enable location to show nearby stores',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -112,7 +109,7 @@ class LocationPermissionOffTile extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          /// ENABLE BUTTON (RIGHT)
+          /// enable button
           SizedBox(
             height: 36,
             child: ElevatedButton(
@@ -120,7 +117,8 @@ class LocationPermissionOffTile extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: green,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -214,16 +212,28 @@ class CurrentLocationTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
-            children: const [
-              Icon(Icons.my_location, color: Color(0xFF03B602)),
-              SizedBox(width: 14),
-              Expanded(
+            children: [
+              const Icon(Icons.my_location,
+                  color: Color(0xFF03B602)),
+              const SizedBox(width: 14),
+
+              const Expanded(
                 child: Text(
                   'Use current location',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              Icon(Icons.chevron_right),
+
+              if (isDetecting)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                )
+              else
+                const Icon(Icons.chevron_right),
             ],
           ),
         ),
@@ -257,17 +267,24 @@ class AddressTile extends StatelessWidget {
       onTap: onTap,
       leading: Icon(
         icon,
-        color: isActive ? const Color(0xFF03B602) : Colors.grey,
+        color:
+            isActive ? const Color(0xFF03B602) : Colors.grey,
       ),
       title: Text(
         title,
         style: TextStyle(
-          fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+          fontWeight:
+              isActive ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
-      subtitle: Text(subtitle),
+      subtitle: Text(
+        subtitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: isActive
-          ? const Icon(Icons.check_circle, color: Color(0xFF03B602))
+          ? const Icon(Icons.check_circle,
+              color: Color(0xFF03B602))
           : const Icon(Icons.chevron_right),
     );
   }

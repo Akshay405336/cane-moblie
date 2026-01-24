@@ -26,11 +26,6 @@ class _AppLayoutState extends State<AppLayout>
 
   bool _sheetOpen = false;
   bool _initialized = false;
-
-  /// 🔑 VERY IMPORTANT
-  /// This flag exists ONLY in memory.
-  /// - Fresh app launch → false
-  /// - Background resume → stays true
   bool _locationAskedThisSession = false;
 
   final List<Widget> _pages = const [
@@ -41,87 +36,69 @@ class _AppLayoutState extends State<AppLayout>
     ExplorePage(),
   ];
 
-  // ===============================================================
-  // INIT — THIS RUNS ON EVERY REAL APP LAUNCH
-  // ===============================================================
+  /* =============================================================== */
+  /* INIT                                                             */
+  /* =============================================================== */
 
   @override
   void initState() {
     super.initState();
-    debugPrint('🟢 AppLayout CREATED (new process)');
 
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      debugPrint('🟢 PostFrameCallback start');
+      debugPrint('🟢 AppLayout started');
 
-      // 1️⃣ Load persisted location (if any)
+      // Load persisted location
       await LocationState.load();
+
       debugPrint(
-        '📍 Location loaded | hasPersisted=${LocationState.hasPersistedLocation}',
+        '📍 Persisted location => '
+        'address="${LocationState.address}" | '
+        'lat=${LocationState.latitude}, '
+        'lng=${LocationState.longitude}',
       );
 
-      // 2️⃣ Sync header UI
       LocationHeaderController.instance.sync();
-      debugPrint('🧠 Header synced');
 
-      // 3️⃣ Enforce location rule (ONLY ON FRESH LAUNCH)
       await _enforceLocationOnFreshLaunch();
 
       _initialized = true;
       if (mounted) setState(() {});
-      debugPrint('✅ AppLayout initialized');
     });
   }
 
   @override
   void dispose() {
-    debugPrint('🔴 AppLayout.dispose (widget destroyed)');
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  // ===============================================================
-  // 🔐 LOCATION ENFORCEMENT — YOUR CUSTOM RULE
-  // ===============================================================
+  /* =============================================================== */
+  /* ENFORCE LOCATION ON FIRST LAUNCH                                */
+  /* =============================================================== */
 
   Future<void> _enforceLocationOnFreshLaunch() async {
-    debugPrint(
-      '🔍 enforceLocation | alreadyAsked=$_locationAskedThisSession',
-    );
-
-    // ❌ DO NOT ask again in same app session
-    if (_locationAskedThisSession) {
-      debugPrint('⛔ Location already asked in this session');
-      return;
-    }
+    if (_locationAskedThisSession) return;
 
     _locationAskedThisSession = true;
 
-    final gpsEnabled =
-        await LocationHelper.canUseLocationSilently();
+    final gpsEnabled = await LocationHelper.isGpsEnabled();
 
-    debugPrint(
-      '📍 Fresh launch check | gpsEnabled=$gpsEnabled',
-    );
+    debugPrint('🔍 Fresh launch GPS enabled = $gpsEnabled');
 
-    /// ✅ YOUR RULE:
-    /// Fresh app launch + GPS OFF → ALWAYS ask
-    /// Stored address is IGNORED here
     if (!gpsEnabled) {
-      debugPrint('📣 GPS OFF on fresh launch → opening sheet');
+      debugPrint('📣 Asking for location (GPS off)');
       _openLocationSheet();
-    } else {
-      debugPrint('✅ GPS ON → no need to ask');
     }
   }
 
-  // ===============================================================
-  // 👉 USE CURRENT LOCATION (BUTTON TAP)
-  // ===============================================================
+  /* =============================================================== */
+  /* USE CURRENT LOCATION (BUTTON)                                   */
+  /* =============================================================== */
 
   Future<void> _useCurrentLocation() async {
-    debugPrint('👉 Use Current Location tapped');
+    debugPrint('👉 Use current location tapped');
 
     final hasPermission =
         await LocationHelper.requestPermissionFromUser();
@@ -131,60 +108,63 @@ class _AppLayoutState extends State<AppLayout>
     if (!hasPermission) {
       LocationState.setError('Location permission required');
       LocationHeaderController.instance.sync();
-      debugPrint('❌ Permission denied');
       return;
     }
 
-    /// 🚨 DO NOT fetch here
-    /// Just open system settings
-    debugPrint('⚙️ Opening system location settings');
     await LocationHelper.ensureLocationServiceEnabled();
   }
 
-  // ===============================================================
-  // 📡 FETCH + SAVE GPS LOCATION
-  // ===============================================================
+  /* =============================================================== */
+  /* ⭐ FETCH + SAVE GPS LOCATION                                     */
+  /* =============================================================== */
 
   Future<void> _fetchAndSaveLocation() async {
-    debugPrint('🟡 startDetecting');
+    debugPrint('🟡 Fetching GPS location...');
 
     LocationState.startDetecting();
     LocationHeaderController.instance.sync();
 
-    final address =
-        await LocationHelper.fetchCurrentAddress();
+    final data =
+        await LocationHelper.fetchCurrentLocationData();
 
-    debugPrint('📦 fetchCurrentAddress="$address"');
+    if (data == null) {
+      debugPrint('❌ GPS fetch failed');
 
-    if (address.isEmpty) {
       LocationState.setError('Unable to detect location');
       LocationHeaderController.instance.sync();
-      debugPrint('❌ Address empty');
       return;
     }
 
-    await LocationState.setGpsAddress(address);
+    // ⭐ MAIN DEBUG LOG YOU WANTED
+    debugPrint(
+      '📍 GPS RESULT => '
+      'lat=${data.latitude}, lng=${data.longitude}, '
+      'address="${data.address}"',
+    );
+
+    await LocationState.setGpsAddress(
+      address: data.address,
+      lat: data.latitude,
+      lng: data.longitude,
+    );
+
     LocationHeaderController.instance.sync();
 
-    debugPrint('✅ GPS location saved');
+    debugPrint('✅ Location saved to state');
 
     if (_sheetOpen && mounted) {
-      debugPrint('📤 Closing bottom sheet');
       Navigator.pop(context);
     }
   }
 
-  // ===============================================================
-  // 📂 OPEN LOCATION BOTTOM SHEET
-  // ===============================================================
+  /* =============================================================== */
+  /* OPEN BOTTOM SHEET                                               */
+  /* =============================================================== */
 
   void _openLocationSheet() {
-    if (_sheetOpen || !mounted) {
-      debugPrint('⛔ Sheet already open or widget disposed');
-      return;
-    }
+    if (_sheetOpen || !mounted) return;
 
-    debugPrint('📂 Opening LocationBottomSheet');
+    debugPrint('📂 Opening location bottom sheet');
 
     _sheetOpen = true;
 
@@ -201,15 +181,23 @@ class _AppLayoutState extends State<AppLayout>
       builder: (_) {
         return LocationBottomSheet(
           onUseCurrentLocation: _useCurrentLocation,
+
           onSelectSavedAddress: ({
             required String id,
             required String address,
+            double? lat,
+            double? lng,
           }) async {
-            debugPrint('🏠 Saved address selected');
+            debugPrint(
+              '🏠 Saved address selected => '
+              'lat=$lat, lng=$lng, address="$address"',
+            );
 
             await LocationState.setSavedAddress(
               id: id,
               address: address,
+              lat: lat,
+              lng: lng,
             );
 
             LocationHeaderController.instance.sync();
@@ -224,35 +212,29 @@ class _AppLayoutState extends State<AppLayout>
     });
   }
 
-  // ===============================================================
-  // 🔁 APP LIFECYCLE — THIS IS THE KEY PART
-  // ===============================================================
+  /* =============================================================== */
+  /* LIFECYCLE                                                        */
+  /* =============================================================== */
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
-    debugPrint('🔁 AppLifecycleState = $state');
+    if (state != AppLifecycleState.resumed) return;
 
-    /// ✅ ONLY handle return from system settings
-    if (state == AppLifecycleState.resumed) {
-      final gpsEnabled =
-          await LocationHelper.canUseLocationSilently();
+    debugPrint('🔁 App resumed');
 
-      debugPrint('📡 GPS enabled on resume = $gpsEnabled');
+    final gpsEnabled = await LocationHelper.isGpsEnabled();
 
-      /// Fetch ONLY if:
-      /// - User enabled GPS
-      /// - Location not yet stored
-      if (gpsEnabled &&
-          !LocationState.hasPersistedLocation) {
-        debugPrint('➡️ GPS enabled → fetching location');
-        await _fetchAndSaveLocation();
-      }
+    debugPrint('📡 GPS enabled on resume = $gpsEnabled');
+
+    if (gpsEnabled && !LocationState.hasCoordinates) {
+      debugPrint('➡️ Fetching GPS after resume');
+      await _fetchAndSaveLocation();
     }
   }
 
-  // ===============================================================
-  // UI
-  // ===============================================================
+  /* =============================================================== */
+  /* UI                                                               */
+  /* =============================================================== */
 
   @override
   Widget build(BuildContext context) {
@@ -273,9 +255,8 @@ class _AppLayoutState extends State<AppLayout>
       ),
       bottomNavigationBar: AppNavBottom(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
+        onTap: (index) =>
+            setState(() => _currentIndex = index),
       ),
     );
   }

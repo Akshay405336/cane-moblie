@@ -13,6 +13,10 @@ class Category {
     this.imagePath,
   });
 
+  /* ================================================= */
+  /* JSON                                              */
+  /* ================================================= */
+
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
       id: json['id'] as String,
@@ -20,6 +24,20 @@ class Category {
       imagePath: json['imagePath'] as String?,
     );
   }
+
+  /* ================================================= */
+  /* ⭐ SAFE EMPTY CATEGORY (NEW)                       */
+  /* ================================================= */
+
+  factory Category.empty() {
+    return const Category(
+      id: '',
+      name: 'General',
+      imagePath: null,
+    );
+  }
+
+  /* ================================================= */
 
   Map<String, dynamic> toJson() {
     return {

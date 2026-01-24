@@ -16,8 +16,6 @@ class SavedAddressApi {
       final response =
           await AppHttpClient.dio.get('/saved-addresses');
 
-      // backend format:
-      // { success, code, message, data: [] }
       return List<Map<String, dynamic>>.from(
         response.data['data'] ?? [],
       );
@@ -37,15 +35,23 @@ class SavedAddressApi {
     required String type,
     required String label,
     required String addressText,
+
+    // ⭐ NEW
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final response =
           await AppHttpClient.dio.post(
         '/saved-addresses',
         data: {
-          'type': type.toUpperCase(), // HOME / WORK / OTHER
+          'type': type.toUpperCase(),
           'label': label,
           'addressText': addressText,
+
+          // ⭐ NEW
+          'latitude': latitude,
+          'longitude': longitude,
         },
       );
 
@@ -65,6 +71,10 @@ class SavedAddressApi {
   static Future<Map<String, dynamic>?> update({
     required String id,
     required String addressText,
+
+    // ⭐ NEW
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final response =
@@ -72,6 +82,10 @@ class SavedAddressApi {
         '/saved-addresses/$id/update',
         data: {
           'addressText': addressText,
+
+          // ⭐ NEW
+          'latitude': latitude,
+          'longitude': longitude,
         },
       );
 

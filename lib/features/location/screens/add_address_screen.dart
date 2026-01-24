@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/saved_address.dart';
 import '../../../utils/saved_address_storage.dart';
 import '../../../utils/location_state.dart';
+import '../../../utils/location_helper.dart'; // ⭐ NEW
 
 class AddAddressScreen extends StatefulWidget {
   final SavedAddress? existing;
@@ -50,10 +51,19 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 
     setState(() => _saving = true);
 
+    // ⭐ NEW → convert address to coordinates
+    final geo =
+        await LocationHelper.geocodeAddress(text);
+
+    final lat = geo?.latitude;
+    final lng = geo?.longitude;
+
     if (_isEdit) {
       // -------- UPDATE --------
       final updated = widget.existing!.copyWith(
         address: text,
+        lat: lat,
+        lng: lng,
       );
 
       await SavedAddressStorage.update(updated);
@@ -63,21 +73,25 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         await LocationState.setSavedAddress(
           id: updated.id,
           address: updated.address,
+          lat: updated.lat,
+          lng: updated.lng,
         );
       }
     } else {
       // -------- CREATE --------
       final temp = SavedAddress(
-        id: '', // backend assigns
+        id: '',
         type: _type,
         label: _labelForType(_type),
         address: text,
+        lat: lat,
+        lng: lng,
       );
 
       await SavedAddressStorage.save(temp);
 
-      // ✅ Deterministic selection
       final list = await SavedAddressStorage.getAll();
+
       final created = list.firstWhere(
         (a) => a.type == _type,
         orElse: () => list.last,
@@ -86,6 +100,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       await LocationState.setSavedAddress(
         id: created.id,
         address: created.address,
+        lat: created.lat,
+        lng: created.lng,
       );
     }
 
@@ -102,8 +118,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     final id = widget.existing!.id;
     await SavedAddressStorage.delete(id);
 
-    // Active address cleanup already handled,
-    // this just makes intent explicit
     if (mounted) Navigator.pop(context);
   }
 
@@ -126,7 +140,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEdit ? 'Edit address' : 'Add address'),
+        title:
+            Text(_isEdit ? 'Edit address' : 'Add address'),
         actions: [
           if (_isEdit)
             IconButton(
@@ -138,11 +153,13 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             const Text(
               'Save address as',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style:
+                  TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
@@ -154,7 +171,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
             const SizedBox(height: 24),
             const Text(
               'Address',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style:
+                  TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
 
@@ -198,7 +216,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         final selected = _type == type;
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 4),
             child: ChoiceChip(
               label: Text(_labelForType(type)),
               selected: selected,

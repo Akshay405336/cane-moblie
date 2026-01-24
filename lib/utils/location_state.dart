@@ -9,22 +9,34 @@ enum AddressSource {
 class LocationState {
   LocationState._();
 
+  /* ================================================= */
+  /* STORAGE KEYS                                      */
+  /* ================================================= */
+
   static const _locationKey = 'device_location_address';
   static const _addressSourceKey = 'active_address_source';
   static const _activeSavedIdKey = 'active_saved_address_id';
+
+  // ⭐ coordinates (required for outlets API)
+  static const _latKey = 'device_location_lat';
+  static const _lngKey = 'device_location_lng';
+
+  /* ================================================= */
+  /* INTERNAL STATE                                    */
+  /* ================================================= */
 
   static String? _address;
   static AddressSource? _source;
   static String? _activeSavedAddressId;
 
-  // 🔄 Detecting state (for shimmer / loader)
-  static bool _isDetecting = false;
+  static double? _latitude;
+  static double? _longitude;
 
-  // ❌ Error state
+  static bool _isDetecting = false;
   static String? _errorMessage;
 
   /* ================================================= */
-  /* GETTERS                                          */
+  /* GETTERS                                           */
   /* ================================================= */
 
   static bool get hasLocation =>
@@ -48,25 +60,35 @@ class LocationState {
   static String get errorMessage =>
       _errorMessage ?? 'Unable to detect location';
 
-  /// 🔐 HARD RULE:
-  /// If true → NEVER auto-fetch GPS on app start
+  // ⭐ coordinates getters
+  static double? get latitude => _latitude;
+  static double? get longitude => _longitude;
+
+  static bool get hasCoordinates =>
+      _latitude != null && _longitude != null;
+
+  /// 🔐 If true → do NOT auto fetch GPS
   static bool get hasPersistedLocation =>
       hasLocation && _source != null;
 
   /* ================================================= */
-  /* LIFECYCLE                                        */
+  /* LOAD PERSISTED STATE                              */
   /* ================================================= */
 
-  /// Load persisted location
-  /// 🚫 DOES NOT trigger GPS
   static Future<void> load() async {
     final storedAddress = await SecureStorage.read(_locationKey);
     final storedSource = await SecureStorage.read(_addressSourceKey);
     final savedId = await SecureStorage.read(_activeSavedIdKey);
 
+    final lat = await SecureStorage.read(_latKey);
+    final lng = await SecureStorage.read(_lngKey);
+
     _address = storedAddress?.trim().isEmpty == true
         ? null
         : storedAddress;
+
+    _latitude = lat != null ? double.tryParse(lat) : null;
+    _longitude = lng != null ? double.tryParse(lng) : null;
 
     if (_address == null) {
       _source = null;
@@ -79,14 +101,17 @@ class LocationState {
         _source = AddressSource.gps;
         _activeSavedAddressId = null;
         break;
+
       case 'saved':
         _source = AddressSource.saved;
         _activeSavedAddressId = savedId;
         break;
+
       case 'manual':
         _source = AddressSource.manual;
         _activeSavedAddressId = null;
         break;
+
       default:
         _source = null;
         _activeSavedAddressId = null;
@@ -94,10 +119,9 @@ class LocationState {
   }
 
   /* ================================================= */
-  /* GPS FLOW (USER-TRIGGERED ONLY)                    */
+  /* DETECTING STATE                                   */
   /* ================================================= */
 
-  /// Call ONLY when user taps "Use current location"
   static void startDetecting() {
     _isDetecting = true;
     _errorMessage = null;
@@ -107,12 +131,22 @@ class LocationState {
     _isDetecting = false;
   }
 
-  /// ✅ The ONLY method allowed to set GPS address
-  static Future<void> setGpsAddress(String value) async {
-    final trimmed = value.trim();
+  /* ================================================= */
+  /* GPS FLOW                                          */
+  /* ================================================= */
+
+  static Future<void> setGpsAddress({
+    required String address,
+    required double lat,
+    required double lng,
+  }) async {
+    final trimmed = address.trim();
     if (trimmed.isEmpty) return;
 
     _address = trimmed;
+    _latitude = lat;
+    _longitude = lng;
+
     _source = AddressSource.gps;
     _activeSavedAddressId = null;
     _errorMessage = null;
@@ -121,10 +155,13 @@ class LocationState {
     await SecureStorage.write(_locationKey, trimmed);
     await SecureStorage.write(_addressSourceKey, 'gps');
     await SecureStorage.delete(_activeSavedIdKey);
+
+    await SecureStorage.write(_latKey, lat.toString());
+    await SecureStorage.write(_lngKey, lng.toString());
   }
 
   /* ================================================= */
-  /* MANUAL ADDRESS FLOW                              */
+  /* MANUAL ADDRESS FLOW                               */
   /* ================================================= */
 
   static Future<void> setManualAddress(String address) async {
@@ -132,6 +169,9 @@ class LocationState {
     if (trimmed.isEmpty) return;
 
     _address = trimmed;
+    _latitude = null;
+    _longitude = null;
+
     _source = AddressSource.manual;
     _activeSavedAddressId = null;
     _errorMessage = null;
@@ -140,20 +180,28 @@ class LocationState {
     await SecureStorage.write(_locationKey, trimmed);
     await SecureStorage.write(_addressSourceKey, 'manual');
     await SecureStorage.delete(_activeSavedIdKey);
+
+    await SecureStorage.delete(_latKey);
+    await SecureStorage.delete(_lngKey);
   }
 
   /* ================================================= */
-  /* SAVED ADDRESS FLOW                               */
+  /* SAVED ADDRESS FLOW                                */
   /* ================================================= */
 
   static Future<void> setSavedAddress({
     required String id,
     required String address,
+    double? lat,
+    double? lng,
   }) async {
     final trimmed = address.trim();
     if (trimmed.isEmpty) return;
 
     _address = trimmed;
+    _latitude = lat;
+    _longitude = lng;
+
     _source = AddressSource.saved;
     _activeSavedAddressId = id;
     _errorMessage = null;
@@ -162,13 +210,23 @@ class LocationState {
     await SecureStorage.write(_locationKey, trimmed);
     await SecureStorage.write(_addressSourceKey, 'saved');
     await SecureStorage.write(_activeSavedIdKey, id);
+
+    if (lat != null) {
+      await SecureStorage.write(_latKey, lat.toString());
+    }
+
+    if (lng != null) {
+      await SecureStorage.write(_lngKey, lng.toString());
+    }
   }
 
-  /// Called only if active saved address is deleted
+  /// ⭐ RESTORED (fixes your compile error)
   static Future<void> removeActiveSavedAddress() async {
     if (_source != AddressSource.saved) return;
 
     _address = null;
+    _latitude = null;
+    _longitude = null;
     _source = null;
     _activeSavedAddressId = null;
     _errorMessage = null;
@@ -177,10 +235,12 @@ class LocationState {
     await SecureStorage.delete(_locationKey);
     await SecureStorage.delete(_addressSourceKey);
     await SecureStorage.delete(_activeSavedIdKey);
+    await SecureStorage.delete(_latKey);
+    await SecureStorage.delete(_lngKey);
   }
 
   /* ================================================= */
-  /* ERROR                                            */
+  /* ERROR                                             */
   /* ================================================= */
 
   static void setError(String message) {
@@ -193,18 +253,13 @@ class LocationState {
   }
 
   /* ================================================= */
-  /* AUTH EVENTS                                      */
+  /* CLEAR (FULL RESET ONLY)                           */
   /* ================================================= */
 
-  /// 🔐 Logout MUST NOT clear location
-  static Future<void> onLogout() async {
-    // Intentionally empty
-    // Location survives logout
-  }
-
-  /// 🚨 Full reset (manual app reset / debug only)
   static Future<void> clearAll() async {
     _address = null;
+    _latitude = null;
+    _longitude = null;
     _source = null;
     _activeSavedAddressId = null;
     _isDetecting = false;
@@ -213,5 +268,7 @@ class LocationState {
     await SecureStorage.delete(_locationKey);
     await SecureStorage.delete(_addressSourceKey);
     await SecureStorage.delete(_activeSavedIdKey);
+    await SecureStorage.delete(_latKey);
+    await SecureStorage.delete(_lngKey);
   }
 }

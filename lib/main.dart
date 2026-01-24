@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 
 import 'routes.dart';
-import './features/home/services/product_socket_service.dart';
 import './features/home/services/category_socket_service.dart';
 import './utils/app_lifecycle_handler.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔄 App lifecycle handling
+  /// 🔄 Lifecycle observer
   WidgetsBinding.instance.addObserver(
     AppLifecycleHandler(),
   );
 
-  // 🔥 Warm up sockets early
-  ProductSocketService.connect();
+  /// ✅ Only categories warmup globally
   CategorySocketService.connect();
 
   runApp(const CaneAndTenderApp());
@@ -29,9 +27,6 @@ class CaneAndTenderApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Cane & Tender',
 
-      /* -------------------------------------------------- */
-      /* 🌱 SUGARCANE GREEN THEME                           */
-      /* -------------------------------------------------- */
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFE8F5E9),
         primaryColor: const Color(0xFF2E7D32),
@@ -59,9 +54,6 @@ class CaneAndTenderApp extends StatelessWidget {
         ),
       ),
 
-      /* -------------------------------------------------- */
-      /* ROUTING                                           */
-      /* -------------------------------------------------- */
       initialRoute: AppRoutes.splash,
       routes: AppRoutes.routes,
     );

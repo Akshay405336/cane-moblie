@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../models/product.model.dart';
 import '../screens/product_details.screen.dart';
-import '../theme/home_colors.dart';
-import '../theme/home_spacing.dart';
-import '../theme/home_text_styles.dart';
+import '../../home/theme/home_colors.dart';
+import '../../home/theme/home_spacing.dart';
+import '../../home/theme/home_text_styles.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
 
+  /// ⭐ outlet scoped
+  final String outletId;
+
   const ProductCard({
     super.key,
     required this.product,
+    required this.outletId,
   });
 
   @override
@@ -23,8 +27,10 @@ class ProductCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                ProductDetailsScreen(product: product),
+            builder: (_) => ProductDetailsScreen(
+              product: product,
+              outletId: outletId,
+            ),
           ),
         );
       },
@@ -61,7 +67,6 @@ class ProductCard extends StatelessWidget {
                       height: 120,
                       width: double.infinity,
                       child: Image.network(
-                        // 🔥 FIX: FULL URL
                         product.mainImageUrl,
                         fit: BoxFit.cover,
                         loadingBuilder:
@@ -132,8 +137,7 @@ class ProductCard extends StatelessWidget {
                     child: const Text(
                       '+ ADD',
                       style: TextStyle(
-                        color:
-                            HomeColors.primaryGreen,
+                        color: HomeColors.primaryGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -153,12 +157,9 @@ class ProductCard extends StatelessWidget {
                 0,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
-                  /* PRICE ROW */
-
                   Row(
                     children: [
                       _GreenPricePill(
@@ -168,11 +169,9 @@ class ProductCard extends StatelessWidget {
                       if (product.hasDiscount)
                         Text(
                           '₹${product.originalPrice.toStringAsFixed(0)}',
-                          style: HomeTextStyles
-                              .originalPrice
+                          style: HomeTextStyles.originalPrice
                               .copyWith(
-                            color:
-                                HomeColors.textGrey,
+                            color: HomeColors.textGrey,
                           ),
                         ),
                     ],
@@ -180,42 +179,30 @@ class ProductCard extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  /* DISCOUNT */
-
                   if (product.hasDiscount)
                     Row(
                       children: [
                         Text(
                           '${product.discountPercent}% OFF',
                           style: const TextStyle(
-                            color:
-                                HomeColors.primaryGreen,
+                            color: HomeColors.primaryGreen,
                             fontSize: 12,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Expanded(
-                          child: _DottedLine(),
-                        ),
+                        const Expanded(child: _DottedLine()),
                       ],
                     ),
 
                   const SizedBox(height: 4),
 
-                  /* PRODUCT NAME */
-
                   Text(
                     product.name,
                     maxLines: 2,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style: HomeTextStyles
-                        .productName
-                        .copyWith(
-                      height: 1.25,
-                    ),
+                    overflow: TextOverflow.ellipsis,
+                    style: HomeTextStyles.productName
+                        .copyWith(height: 1.25),
                   ),
 
                   const SizedBox(height: 2),
@@ -274,6 +261,7 @@ class _DottedLine extends StatelessWidget {
       builder: (context, constraints) {
         final dashCount =
             (constraints.maxWidth / 6).floor();
+
         return Row(
           children: List.generate(
             dashCount,
@@ -281,8 +269,7 @@ class _DottedLine extends StatelessWidget {
               child: Container(
                 height: 1,
                 margin:
-                    const EdgeInsets.symmetric(
-                        horizontal: 1),
+                    const EdgeInsets.symmetric(horizontal: 1),
                 color: HomeColors.primaryGreen
                     .withOpacity(0.4),
               ),

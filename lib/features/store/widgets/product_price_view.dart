@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.model.dart';
-import '../theme/home_colors.dart';
-import '../theme/home_text_styles.dart';
+import '../../home/theme/home_colors.dart';
+import '../../home/theme/home_text_styles.dart';
 
 /// Product price view
 /// Used in:

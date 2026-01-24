@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import '../theme/home_colors.dart';
-import '../theme/home_spacing.dart';
+import '../../home/theme/home_colors.dart';
+import '../../home/theme/home_spacing.dart';
 
 class ProductShimmerWidget extends StatelessWidget {
   const ProductShimmerWidget({super.key});

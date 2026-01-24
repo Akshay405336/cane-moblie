@@ -1,4 +1,5 @@
 /// lib/network/http_client.dart
+
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -16,8 +17,15 @@ class AppHttpClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: Env.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+
+        /* ================================================= */
+        /* ⭐⭐⭐ FIX: BIGGER TIMEOUTS (ngrok safe) ⭐⭐⭐         */
+        /* ================================================= */
+
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+
         responseType: ResponseType.json,
       ),
     );
@@ -25,24 +33,32 @@ class AppHttpClient {
     /* -------------------------------------------------- */
     /* REQUEST INTERCEPTOR                                */
     /* -------------------------------------------------- */
+
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add base headers (x-client-type, x-device-id, content-type)
           final headers = await AuthHeaders.baseHeaders();
           options.headers.addAll(headers);
 
-          // Add access token if available
           final accessToken =
               await SecureStorage.getAccessToken();
+
           if (accessToken != null) {
             options.headers['Authorization'] =
                 'Bearer $accessToken';
           }
 
+          print(
+              '🌍 HTTP → ${options.method} ${options.uri}');
           handler.next(options);
         },
+        onResponse: (response, handler) {
+          print(
+              '✅ HTTP ← ${response.statusCode} ${response.requestOptions.path}');
+          handler.next(response);
+        },
         onError: (error, handler) {
+          print('❌ HTTP ERROR → ${error.message}');
           handler.next(error);
         },
       ),
@@ -51,20 +67,24 @@ class AppHttpClient {
     /* -------------------------------------------------- */
     /* TOKEN REFRESH INTERCEPTOR                          */
     /* -------------------------------------------------- */
+
     dio.interceptors.add(TokenInterceptor());
 
     /* -------------------------------------------------- */
     /* HTTPS (mkcert / self-signed) – DEV ONLY            */
     /* -------------------------------------------------- */
+
     if (!Env.isProd) {
       final adapter =
           dio.httpClientAdapter as IOHttpClientAdapter;
 
       adapter.createHttpClient = () {
-        final client = HttpClient(); // dart:io HttpClient
+        final client = HttpClient();
+
         client.badCertificateCallback =
             (X509Certificate cert, String host, int port) =>
                 true;
+
         return client;
       };
     }

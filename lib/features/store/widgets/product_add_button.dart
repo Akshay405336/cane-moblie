@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/home_colors.dart';
-import '../theme/home_spacing.dart';
-import '../theme/home_text_styles.dart';
+import '../../home/theme/home_colors.dart';
+import '../../home/theme/home_spacing.dart';
+import '../../home/theme/home_text_styles.dart';
 
 class ProductAddButton extends StatelessWidget {
   final VoidCallback? onTap;
