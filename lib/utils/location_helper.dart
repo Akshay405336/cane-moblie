@@ -107,9 +107,9 @@ class LocationHelper {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high, // ⭐ better
-        timeLimit: const Duration(seconds: 10),
-      );
+  desiredAccuracy: LocationAccuracy.bestForNavigation,
+  forceAndroidLocationManager: true,
+);
 
       final placemarks = await placemarkFromCoordinates(
         position.latitude,

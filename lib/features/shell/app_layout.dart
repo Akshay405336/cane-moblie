@@ -49,17 +49,13 @@ class _AppLayoutState extends State<AppLayout>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       debugPrint('🟢 AppLayout started');
 
-      // Load persisted location
+      /// Load persisted (for quick UI only)
       await LocationState.load();
 
-      debugPrint(
-        '📍 Persisted location => '
-        'address="${LocationState.address}" | '
-        'lat=${LocationState.latitude}, '
-        'lng=${LocationState.longitude}',
-      );
-
       LocationHeaderController.instance.sync();
+
+      /// ⭐ ALWAYS fetch fresh GPS on launch
+      await _fetchAndSaveLocation();
 
       await _enforceLocationOnFreshLaunch();
 
@@ -88,13 +84,14 @@ class _AppLayoutState extends State<AppLayout>
     debugPrint('🔍 Fresh launch GPS enabled = $gpsEnabled');
 
     if (!gpsEnabled) {
-      debugPrint('📣 Asking for location (GPS off)');
       _openLocationSheet();
     }
   }
 
   /* =============================================================== */
-  /* USE CURRENT LOCATION (BUTTON)                                   */
+  /* USE CURRENT LOCATION (BUTTON TAP)                               */
+  /* =============================================================== */
+  /* ⭐ ALWAYS FETCH FRESH GPS HERE                                   */
   /* =============================================================== */
 
   Future<void> _useCurrentLocation() async {
@@ -103,19 +100,23 @@ class _AppLayoutState extends State<AppLayout>
     final hasPermission =
         await LocationHelper.requestPermissionFromUser();
 
-    debugPrint('🔐 Permission result = $hasPermission');
-
     if (!hasPermission) {
       LocationState.setError('Location permission required');
       LocationHeaderController.instance.sync();
       return;
     }
 
-    await LocationHelper.ensureLocationServiceEnabled();
+    final enabled =
+        await LocationHelper.ensureLocationServiceEnabled();
+
+    if (!enabled) return;
+
+    /// ⭐ ALWAYS fetch fresh location
+    await _fetchAndSaveLocation();
   }
 
   /* =============================================================== */
-  /* ⭐ FETCH + SAVE GPS LOCATION                                     */
+  /* ⭐ FETCH + SAVE GPS LOCATION (CORE LOGIC)                        */
   /* =============================================================== */
 
   Future<void> _fetchAndSaveLocation() async {
@@ -135,10 +136,10 @@ class _AppLayoutState extends State<AppLayout>
       return;
     }
 
-    // ⭐ MAIN DEBUG LOG YOU WANTED
     debugPrint(
       '📍 GPS RESULT => '
-      'lat=${data.latitude}, lng=${data.longitude}, '
+      'lat=${data.latitude}, '
+      'lng=${data.longitude}, '
       'address="${data.address}"',
     );
 
@@ -164,8 +165,6 @@ class _AppLayoutState extends State<AppLayout>
   void _openLocationSheet() {
     if (_sheetOpen || !mounted) return;
 
-    debugPrint('📂 Opening location bottom sheet');
-
     _sheetOpen = true;
 
     showModalBottomSheet(
@@ -188,11 +187,6 @@ class _AppLayoutState extends State<AppLayout>
             double? lat,
             double? lng,
           }) async {
-            debugPrint(
-              '🏠 Saved address selected => '
-              'lat=$lat, lng=$lng, address="$address"',
-            );
-
             await LocationState.setSavedAddress(
               id: id,
               address: address,
@@ -207,13 +201,14 @@ class _AppLayoutState extends State<AppLayout>
         );
       },
     ).whenComplete(() {
-      debugPrint('📴 Bottom sheet closed');
       _sheetOpen = false;
     });
   }
 
   /* =============================================================== */
   /* LIFECYCLE                                                        */
+  /* =============================================================== */
+  /* ⭐ ALWAYS REFRESH GPS ON RESUME                                   */
   /* =============================================================== */
 
   @override
@@ -224,10 +219,7 @@ class _AppLayoutState extends State<AppLayout>
 
     final gpsEnabled = await LocationHelper.isGpsEnabled();
 
-    debugPrint('📡 GPS enabled on resume = $gpsEnabled');
-
-    if (gpsEnabled && !LocationState.hasCoordinates) {
-      debugPrint('➡️ Fetching GPS after resume');
+    if (gpsEnabled) {
       await _fetchAndSaveLocation();
     }
   }
