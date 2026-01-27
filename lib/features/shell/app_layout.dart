@@ -55,7 +55,7 @@ class _AppLayoutState extends State<AppLayout>
   }
 
   /* ================================================= */
-  /* BOOTSTRAP (FINAL LOGIC)                           */
+  /* BOOTSTRAP                                         */
   /* ================================================= */
 
   Future<void> _bootstrap() async {
@@ -83,28 +83,24 @@ class _AppLayoutState extends State<AppLayout>
     debugPrint(
         '📍 hasLocation=${location.hasLocation} | gps=$gpsEnabled');
 
-    /* ================================================= */
-    /* ⭐ FINAL RULE                                      */
-    /* ================================================= */
-
     if (!gpsEnabled || !location.hasLocation) {
-      debugPrint('⚠️ Opening location sheet');
-      _openLocationSheet();
+      debugPrint('⚠️ Opening location sheet (auto)');
+      _openLocationSheetAuto(); // ⭐ changed
     } else {
       debugPrint('✅ Location ready → skip sheet');
     }
   }
 
   /* ================================================= */
-  /* OPEN SHEET                                        */
+  /* ⭐ AUTO SHEET (system open)                        */
   /* ================================================= */
 
-  void _openLocationSheet() {
+  void _openLocationSheetAuto() {
     if (_sheetOpen || !mounted) return;
 
     _sheetOpen = true;
 
-    debugPrint('📂 Opening bottom sheet');
+    debugPrint('📂 Opening bottom sheet (auto)');
 
     showModalBottomSheet(
       context: context,
@@ -114,7 +110,35 @@ class _AppLayoutState extends State<AppLayout>
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(18)),
       ),
-      builder: (_) => const LocationBottomSheet(),
+      builder: (_) => const LocationBottomSheet(
+        autoClose: true, // ⭐ auto close
+      ),
+    ).whenComplete(() {
+      debugPrint('📴 Sheet closed');
+      _sheetOpen = false;
+    });
+  }
+
+  /* ================================================= */
+  /* ⭐ MANUAL SHEET (header tap)                       */
+  /* ================================================= */
+
+  void _openLocationSheetManual() {
+    if (_sheetOpen || !mounted) return;
+
+    _sheetOpen = true;
+
+    debugPrint('📂 Opening bottom sheet (manual)');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => const LocationBottomSheet(), // ⭐ no auto close
     ).whenComplete(() {
       debugPrint('📴 Sheet closed');
       _sheetOpen = false;
@@ -137,14 +161,12 @@ class _AppLayoutState extends State<AppLayout>
     debugPrint(
         '🔁 Resume → hasLocation=${location.hasLocation} | gps=$gpsEnabled');
 
-    /// GPS turned OFF while app closed
     if (!gpsEnabled) {
       debugPrint('⚠️ GPS OFF → opening sheet');
-      _openLocationSheet();
+      _openLocationSheetAuto(); // ⭐ changed
       return;
     }
 
-    /// GPS ON but no cache
     if (!location.hasLocation && !location.isDetecting) {
       debugPrint('📡 Resume detect');
       location.detectCurrentLocation();
@@ -175,7 +197,7 @@ class _AppLayoutState extends State<AppLayout>
 
     return Scaffold(
       appBar: AppHeader(
-        onLocationTap: _openLocationSheet,
+        onLocationTap: _openLocationSheetManual, // ⭐ changed
       ),
       body: IndexedStack(
         index: _currentIndex,

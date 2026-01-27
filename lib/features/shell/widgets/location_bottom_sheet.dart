@@ -10,8 +10,13 @@ import 'location_tiles.dart';
 import '../../saved_address/widgets/saved_address_list.dart';
 
 class LocationBottomSheet extends StatefulWidget {
-  
-  const LocationBottomSheet({super.key});
+  /// ⭐ NEW FLAG
+  final bool autoClose;
+
+  const LocationBottomSheet({
+    super.key,
+    this.autoClose = false, // default = manual open
+  });
 
   @override
   State<LocationBottomSheet> createState() => _LocationBottomSheetState();
@@ -73,10 +78,12 @@ void didChangeAppLifecycleState(AppLifecycleState state) async {
   await _checkGps();
 
   /// ⭐ JUST CLOSE SHEET (NO DETECT HERE)
-  if (_gpsEnabled && mounted && Navigator.canPop(context)) {
-    debugPrint('✅ GPS ON → closing sheet immediately');
-    Navigator.pop(context);
-  }
+  if (widget.autoClose &&
+    _gpsEnabled &&
+    mounted &&
+    Navigator.canPop(context)) {
+  Navigator.pop(context);
+}
 }
 
 
@@ -100,10 +107,11 @@ void didChangeAppLifecycleState(AppLifecycleState state) async {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      if (location.hasLocation && Navigator.canPop(context)) {
-        debugPrint('✅ Location ready → closing sheet');
-        Navigator.pop(context);
-      }
+      if (widget.autoClose &&
+    location.hasLocation &&
+    Navigator.canPop(context)) {
+  Navigator.pop(context);
+}
     });
 
     return SafeArea(
@@ -142,10 +150,15 @@ else if (location.isDetecting)
 else
   CurrentLocationTile(
     isDetecting: false,
-    onTap: () {
-      debugPrint('📍 Detect tapped');
-      location.detectCurrentLocation();
-    },
+    onTap: () async {
+  debugPrint('📍 Detect tapped');
+
+  await location.detectCurrentLocation();
+
+  if (mounted && Navigator.canPop(context)) {
+    Navigator.pop(context); // ⭐ close after select
+  }
+},
   ),
 
 /* ================================================= */
@@ -159,10 +172,15 @@ if (savedCtrl.isLoggedIn) ...[
 
   SavedAddressList(
     activeSavedId: location.current?.savedAddressId,
-    onSelect: (addr) {
-      debugPrint('🏠 Saved selected → ${addr.address}');
-      location.setSaved(addr.toLocationData());
-    },
+    onSelect: (addr) async {
+  debugPrint('🏠 Saved selected → ${addr.address}');
+
+  await location.setSaved(addr.toLocationData());
+
+  if (mounted && Navigator.canPop(context)) {
+    Navigator.pop(context); // ⭐ close after select
+  }
+},
   ),
 ],
 
