@@ -31,7 +31,10 @@ class AppHeader extends StatelessWidget
 
       title: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onLocationTap,
+        onTap: () {
+  debugPrint('🔥 HEADER CLICKED');
+  onLocationTap();
+},
         child: const Padding(
           padding: EdgeInsets.symmetric(vertical: 6),
           child: _LocationText(),

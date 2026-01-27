@@ -60,7 +60,7 @@ class LocationController extends ChangeNotifier {
 
     debugPrint('✅ Cache loaded → ${_current!.formattedAddress}');
 
-    notifyListeners();
+    _locationUpdated();
   }
 
   /* ================================================= */
@@ -77,7 +77,7 @@ class LocationController extends ChangeNotifier {
 
     _isDetecting = true;
     _error = null;
-    notifyListeners();
+    _locationUpdated();
 
     try {
       /* ------------------------------------------------- */
@@ -146,7 +146,7 @@ class LocationController extends ChangeNotifier {
       _error = e.toString();
     } finally {
       _isDetecting = false;
-      notifyListeners();
+      _locationUpdated();
     }
   }
 
@@ -165,7 +165,7 @@ class LocationController extends ChangeNotifier {
     _current = result;
 
     await _persist();
-    notifyListeners();
+    _locationUpdated();
   }
 
   /* ================================================= */
@@ -180,7 +180,7 @@ class LocationController extends ChangeNotifier {
     );
 
     await _persist();
-    notifyListeners();
+    _locationUpdated();
   }
 
   /* ================================================= */
@@ -211,4 +211,10 @@ class LocationController extends ChangeNotifier {
 
     debugPrint('💾 Location persisted');
   }
+
+  void _locationUpdated() {
+  debugPrint('📡 Location updated → notify UI');
+
+  notifyListeners();
+}
 }

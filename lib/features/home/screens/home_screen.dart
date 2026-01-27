@@ -66,28 +66,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /* ================================================= */
-  /* REACT TO LOCATION CHANGES ⭐ (NEW CLEAN WAY)        */
+  /* CONNECT SOCKET                                    */
   /* ================================================= */
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final location = context.watch<LocationController>();
-
-    final lat = location.current?.latitude;
-    final lng = location.current?.longitude;
-
-    if (lat == null || lng == null) return;
-
-    /// same coords → skip
-    if (_lastLat == lat && _lastLng == lng) return;
-
-    _lastLat = lat;
-    _lastLng = lng;
-
-    _connectOutletSocket(lat, lng);
-  }
 
   void _connectOutletSocket(double lat, double lng) {
     debugPrint('🚀 Home → connecting outlets lat=$lat lng=$lng');
@@ -137,6 +117,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    /* ================================================= */
+    /* ⭐ CORRECT LOCATION WATCH (MOVED FROM didChangeDependencies) */
+    /* ================================================= */
+
+    final location = context.watch<LocationController>();
+
+    final lat = location.current?.latitude;
+    final lng = location.current?.longitude;
+
+    if (lat != null && lng != null) {
+      if (_lastLat != lat || _lastLng != lng) {
+        _lastLat = lat;
+        _lastLng = lng;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _connectOutletSocket(lat, lng);
+        });
+      }
+    }
+
     return Scaffold(
       backgroundColor: HomeColors.pureWhite,
       body: SafeArea(
