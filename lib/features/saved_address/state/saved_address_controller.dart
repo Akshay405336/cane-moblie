@@ -17,9 +17,7 @@ class SavedAddressController extends ChangeNotifier {
   /* GETTERS                                           */
   /* ================================================= */
 
-  /// never expose mutable list
-  List<SavedAddress> get addresses =>
-      List.unmodifiable(_addresses);
+  List<SavedAddress> get addresses => List.unmodifiable(_addresses);
 
   bool get isLoading => _isLoading;
 
@@ -29,19 +27,22 @@ class SavedAddressController extends ChangeNotifier {
 
   bool get isEmpty => _addresses.isEmpty;
 
-  /// ⭐ REAL AUTH CHECK
   bool get isLoggedIn => AuthState.isAuthenticated;
 
   /* ================================================= */
-  /* LOAD                                              */
+  /* LOAD ⭐ MAIN ENTRY                                */
   /* ================================================= */
 
   Future<void> load({bool forceRefresh = false}) async {
-    debugPrint('📡 SavedCtrl.load (refresh=$forceRefresh)');
+    debugPrint('\n==============================');
+    debugPrint('📡 SavedAddressController.load()');
+    debugPrint('👉 isLoggedIn = $isLoggedIn');
+    debugPrint('👉 forceRefresh = $forceRefresh');
+    debugPrint('==============================');
 
-    /// ⭐ guest → skip completely (NO API CALL)
+    /// ⭐ if guest skip API completely
     if (!isLoggedIn) {
-      debugPrint('⛔ Guest user → skip saved addresses');
+      debugPrint('⛔ Guest → clearing addresses');
       _addresses = [];
       _error = null;
       notifyListeners();
@@ -51,14 +52,21 @@ class SavedAddressController extends ChangeNotifier {
     _startLoading();
 
     try {
-      _addresses =
-          await SavedAddressRepository.getAll(
+      debugPrint('🚀 Calling repository.getAll()');
+
+      final result = await SavedAddressRepository.getAll(
         forceRefresh: forceRefresh,
       );
 
-      debugPrint('✅ Loaded ${_addresses.length} addresses');
-    } catch (e) {
-      debugPrint('❌ load error → $e');
+      debugPrint('📦 RAW RESULT LENGTH => ${result.length}');
+      debugPrint('📦 RAW RESULT => $result');
+
+      _addresses = result;
+
+      debugPrint('✅ STORED COUNT => ${_addresses.length}');
+    } catch (e, s) {
+      debugPrint('❌ LOAD ERROR → $e');
+      debugPrint('$s');
       _error = 'Failed to load saved addresses';
     } finally {
       _stopLoading();
@@ -69,7 +77,10 @@ class SavedAddressController extends ChangeNotifier {
   /* REFRESH                                           */
   /* ================================================= */
 
-  Future<void> refresh() => load(forceRefresh: true);
+  Future<void> refresh() async {
+    debugPrint('🔄 Manual refresh');
+    await load(forceRefresh: true);
+  }
 
   /* ================================================= */
   /* CREATE                                            */
@@ -84,9 +95,9 @@ class SavedAddressController extends ChangeNotifier {
 
       _addresses = [..._addresses, created];
 
-      debugPrint('✅ created → ${created.id}');
+      debugPrint('✅ Created → ${created.id}');
     } catch (e) {
-      debugPrint('❌ create error → $e');
+      debugPrint('❌ Create error → $e');
       _error = 'Unable to create address';
     } finally {
       _stopLoading();
@@ -108,9 +119,9 @@ class SavedAddressController extends ChangeNotifier {
           .map((e) => e.id == updated.id ? updated : e)
           .toList();
 
-      debugPrint('✅ updated → ${updated.id}');
+      debugPrint('✅ Updated → ${updated.id}');
     } catch (e) {
-      debugPrint('❌ update error → $e');
+      debugPrint('❌ Update error → $e');
       _error = 'Unable to update address';
     } finally {
       _stopLoading();
@@ -130,9 +141,9 @@ class SavedAddressController extends ChangeNotifier {
       _addresses =
           _addresses.where((e) => e.id != id).toList();
 
-      debugPrint('✅ deleted → $id');
+      debugPrint('✅ Deleted → $id');
     } catch (e) {
-      debugPrint('❌ delete error → $e');
+      debugPrint('❌ Delete error → $e');
       _error = 'Unable to delete address';
     } finally {
       _stopLoading();
@@ -140,17 +151,16 @@ class SavedAddressController extends ChangeNotifier {
   }
 
   /* ================================================= */
-  /* CLEAR (logout helper) ⭐ VERY IMPORTANT            */
+  /* CLEAR (logout helper)                             */
   /* ================================================= */
 
   void clear() {
-    debugPrint('🧹 SavedCtrl.clear');
+    debugPrint('🧹 Controller cleared (logout)');
 
     _addresses = [];
     _error = null;
     _isLoading = false;
 
-    /// ⭐ clear repo cache too (prevents old user leak)
     SavedAddressRepository.clearCache();
 
     notifyListeners();
@@ -178,12 +188,14 @@ class SavedAddressController extends ChangeNotifier {
   /* ================================================= */
 
   void _startLoading() {
+    debugPrint('⏳ Loading START');
     _isLoading = true;
     _error = null;
     notifyListeners();
   }
 
   void _stopLoading() {
+    debugPrint('✅ Loading END');
     _isLoading = false;
     notifyListeners();
   }

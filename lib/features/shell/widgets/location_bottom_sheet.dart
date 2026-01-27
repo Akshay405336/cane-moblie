@@ -118,52 +118,53 @@ void didChangeAppLifecycleState(AppLifecycleState state) async {
           children: [
             const BottomSheetHandle(),
             const SizedBox(height: 20),
+/* ================================================= */
+/* ⭐ GPS / CURRENT LOCATION SECTION                  */
+/* ================================================= */
 
-            /* ================================================= */
-            /* ⭐ GPS OFF → ENABLE BUTTON                          */
-            /* ================================================= */
-            if (!_gpsEnabled)
-              LocationPermissionOffTile(
-                onEnablePressed: () async {
-                  debugPrint('🚀 Enable tapped');
+if (!_gpsEnabled)
+  LocationPermissionOffTile(
+    onEnablePressed: () async {
+      debugPrint('🚀 Enable tapped');
 
-                  /// ⭐ ask permission FIRST
-                  final granted = await LocationService.requestPermission();
+      final granted = await LocationService.requestPermission();
+      if (!granted) {
+        debugPrint('❌ Permission denied');
+        return;
+      }
 
-                  if (!granted) {
-                    debugPrint('❌ Permission denied');
-                    return;
-                  }
+      await LocationService.openSettings();
+    },
+  )
+else if (location.isDetecting)
+  const LocationFetchingTile()
+else
+  CurrentLocationTile(
+    isDetecting: false,
+    onTap: () {
+      debugPrint('📍 Detect tapped');
+      location.detectCurrentLocation();
+    },
+  ),
 
-                  /// ⭐ open device GPS settings
-                  await LocationService.openSettings();
-                },
-              )
-            else if (location.isDetecting)
-              const LocationFetchingTile()
-            else ...[
-              CurrentLocationTile(
-                isDetecting: false,
-                onTap: () {
-                  debugPrint('📍 Detect tapped');
-                  location.detectCurrentLocation();
-                },
-              ),
+/* ================================================= */
+/* ⭐ ALWAYS SHOW SAVED ADDRESSES IF LOGGED IN ⭐ */
+/* ================================================= */
 
-              if (savedCtrl.isLoggedIn) ...[
-                const SizedBox(height: 26),
-                const SectionTitle(text: 'Saved addresses'),
-                const SizedBox(height: 12),
+if (savedCtrl.isLoggedIn) ...[
+  const SizedBox(height: 26),
+  const SectionTitle(text: 'Saved addresses'),
+  const SizedBox(height: 12),
 
-                SavedAddressList(
-                  activeSavedId: location.current?.savedAddressId,
-                  onSelect: (addr) {
-                    debugPrint('🏠 Saved selected → ${addr.address}');
-                    location.setSaved(addr.toLocationData());
-                  },
-                ),
-              ],
-            ],
+  SavedAddressList(
+    activeSavedId: location.current?.savedAddressId,
+    onSelect: (addr) {
+      debugPrint('🏠 Saved selected → ${addr.address}');
+      location.setSaved(addr.toLocationData());
+    },
+  ),
+],
+
 
             const Spacer(),
             const Divider(),
