@@ -27,94 +27,81 @@ class SavedAddressList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<SavedAddressController, _ViewState>(
-      selector: (_, c) => _ViewState(
-        isLoading: c.isLoading,
-        hasError: c.hasError,
-        error: c.error,
-        addresses: c.addresses,
-      ),
+    /// ⭐ SIMPLE + SAFE (no Selector bugs)
+    final ctrl = context.watch<SavedAddressController>();
 
-      /// ⭐ IMPORTANT → prevents useless rebuilds safely
-      shouldRebuild: (prev, next) => prev != next,
+    /* ================================================= */
+    /* LOADING                                           */
+    /* ================================================= */
 
-      builder: (_, state, __) {
-        /* ================================================= */
-        /* LOADING                                           */
-        /* ================================================= */
+    if (ctrl.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
 
-        if (state.isLoading) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
+    /* ================================================= */
+    /* ERROR                                             */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* ERROR                                             */
-        /* ================================================= */
+    if (ctrl.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            ctrl.error ?? 'Something went wrong',
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
 
-        if (state.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                state.error ?? 'Something went wrong',
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ),
-          );
-        }
+    /* ================================================= */
+    /* EMPTY                                             */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* EMPTY                                             */
-        /* ================================================= */
+    if (ctrl.addresses.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: Text(
+            'No saved addresses yet',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
 
-        if (state.addresses.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text(
-                'No saved addresses yet',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          );
-        }
+    /* ================================================= */
+    /* LIST                                              */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* LIST                                              */
-        /* ================================================= */
+    final children = [
+      for (final address in ctrl.addresses) ...[
+        _AddressCard(
+          address: address,
+          isActive: activeSavedId == address.id,
+          showActions: showActions,
+          onTap: _isSelectionMode ? () => onSelect!(address) : null,
+        ),
+        const SizedBox(height: 10),
+      ],
+    ];
 
-        final children = [
-          for (final address in state.addresses) ...[
-            _AddressCard(
-              address: address,
-              isActive: activeSavedId == address.id,
-              showActions: showActions,
-              onTap: _isSelectionMode
-                  ? () => onSelect!(address)
-                  : null,
-            ),
-            const SizedBox(height: 10),
-          ],
-        ];
+    /// ⭐ bottom sheet → scroll safe
+    if (_isSelectionMode) {
+      return SingleChildScrollView(
+        child: Column(children: children),
+      );
+    }
 
-        /// ⭐ bottom sheet → scroll safe
-        if (_isSelectionMode) {
-          return SingleChildScrollView(
-            child: Column(children: children),
-          );
-        }
-
-        /// ⭐ profile screen → scroll list
-        return ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: children,
-        );
-      },
+    /// ⭐ profile screen → scroll list
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: children,
     );
   }
 }
@@ -186,10 +173,7 @@ class _AddressCard extends StatelessWidget {
                   onSelected: (v) async {
                     if (v == 'delete') {
                       final ok = await _confirmDelete(context);
-
-                      if (ok == true) {
-                        ctrl.delete(address.id);
-                      }
+                      if (ok == true) ctrl.delete(address.id);
                     }
                   },
                   itemBuilder: (_) => const [
@@ -215,8 +199,9 @@ class _AddressCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete address?'),
-        content:
-            const Text('This address will be removed permanently.'),
+        content: const Text(
+          'This address will be removed permanently.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -233,37 +218,6 @@ class _AddressCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/* ===================================================== */
-/* VIEW STATE (fixed equality ⭐)                         */
-/* ===================================================== */
-
-class _ViewState {
-  final bool isLoading;
-  final bool hasError;
-  final String? error;
-  final List<SavedAddress> addresses;
-
-  _ViewState({
-    required this.isLoading,
-    required this.hasError,
-    required this.error,
-    required this.addresses,
-  });
-
-  @override
-  bool operator ==(Object other) {
-    return other is _ViewState &&
-        other.isLoading == isLoading &&
-        other.hasError == hasError &&
-        other.error == error &&
-        other.addresses == addresses; // ⭐ FIXED
-  }
-
-  @override
-  int get hashCode =>
-      Object.hash(isLoading, hasError, error, addresses);
 }
 
 /* ===================================================== */

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../location/services/location_service.dart';
 import '../models/saved_address.model.dart';
 import '../state/saved_address_controller.dart';
+import '../widgets/address_field_picker.dart';
 
 class AddEditAddressScreen extends StatefulWidget {
   final SavedAddress? address;
@@ -31,6 +31,9 @@ class _AddEditAddressScreenState
 
   bool _saving = false;
 
+  double? _lat;
+  double? _lng;
+
   /* ================================================= */
   /* INIT                                               */
   /* ================================================= */
@@ -46,6 +49,10 @@ class _AddEditAddressScreenState
         TextEditingController(text: widget.address?.address);
 
     _type = widget.address?.type ?? SavedAddressType.home;
+
+    /// ⭐ prefill coords when editing
+    _lat = widget.address?.lat;
+    _lng = widget.address?.lng;
   }
 
   @override
@@ -62,30 +69,18 @@ class _AddEditAddressScreenState
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    /// must pick location
+    if (_lat == null || _lng == null) {
+      _showError('Please select location on map');
+      return;
+    }
+
     setState(() => _saving = true);
 
     final ctrl = context.read<SavedAddressController>();
 
     try {
-      /* --------------------------------------------- */
-      /* ⭐ 1. GEOCODE TEXT → LAT/LNG                   */
-      /* --------------------------------------------- */
-
-      final geo = await LocationService.geocodeAddress(
-        _addressCtrl.text.trim(),
-      );
-
-      if (geo == null || !geo.hasCoordinates) {
-        _showError('Unable to detect coordinates for address');
-        return;
-      }
-
-      /* --------------------------------------------- */
-      /* ⭐ 2. BUILD MODEL                              */
-      /* --------------------------------------------- */
-
       final model = SavedAddress(
-        /// ⭐ DO NOT create id for new
         id: widget.address?.id ?? '',
         customerId: widget.address?.customerId ?? '',
 
@@ -93,13 +88,10 @@ class _AddEditAddressScreenState
         address: _addressCtrl.text.trim(),
         type: _type,
 
-        lat: geo.latitude,
-        lng: geo.longitude,
+        /// ⭐ direct coords (no geocoding)
+        lat: _lat!,
+        lng: _lng!,
       );
-
-      /* --------------------------------------------- */
-      /* ⭐ 3. SAVE                                     */
-      /* --------------------------------------------- */
 
       if (widget.isEdit) {
         await ctrl.update(model);
@@ -153,16 +145,18 @@ class _AddEditAddressScreenState
 
               const SizedBox(height: 16),
 
-              /* ADDRESS */
-              TextFormField(
+              /* ================================================= */
+              /* ⭐ MAP PICKER FIELD (reusable widget)               */
+              /* ================================================= */
+
+              AddressFieldPicker(
                 controller: _addressCtrl,
-                maxLines: 2,
-                decoration:
-                    const InputDecoration(labelText: 'Address'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty
-                        ? 'Enter address'
-                        : null,
+                lat: _lat,
+                lng: _lng,
+                onPicked: (lat, lng) {
+                  _lat = lat;
+                  _lng = lng;
+                },
               ),
 
               const SizedBox(height: 16),

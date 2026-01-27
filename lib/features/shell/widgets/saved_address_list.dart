@@ -3,13 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../saved_address/state/saved_address_controller.dart';
 import '../../saved_address/models/saved_address.model.dart';
-
 import '../../shell/widgets/location_tiles.dart';
 
 class SavedAddressList extends StatelessWidget {
   final void Function(SavedAddress address) onSelect;
-
-  /// parent controls which is active
   final String? activeSavedId;
 
   const SavedAddressList({
@@ -20,81 +17,59 @@ class SavedAddressList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<SavedAddressController, _SavedViewState>(
-      selector: (_, c) => _SavedViewState(
-        isLoggedIn: c.isLoggedIn,
-        isLoading: c.isLoading,
-        addresses: c.addresses,
-      ),
-      builder: (_, state, __) {
-        /* ================================================= */
-        /* NOT LOGGED IN                                     */
-        /* ================================================= */
+    /// ⭐ SIMPLE + RELIABLE
+    final ctrl = context.watch<SavedAddressController>();
 
-        if (!state.isLoggedIn) {
-          return const SizedBox.shrink();
-        }
+    /* ================================================= */
+    /* NOT LOGGED IN                                     */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* LOADING                                           */
-        /* ================================================= */
+    if (!ctrl.isLoggedIn) {
+      return const SizedBox.shrink();
+    }
 
-        if (state.isLoading) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          );
-        }
+    /* ================================================= */
+    /* LOADING                                           */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* EMPTY                                             */
-        /* ================================================= */
+    if (ctrl.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
 
-        if (state.addresses.isEmpty) {
-          return const EmptySavedAddress();
-        }
+    /* ================================================= */
+    /* EMPTY                                             */
+    /* ================================================= */
 
-        /* ================================================= */
-        /* LIST (Column > ListView for bottom sheet perf)     */
-        /* ================================================= */
+    if (ctrl.addresses.isEmpty) {
+      return const EmptySavedAddress();
+    }
 
-        return Column(
-          children: [
-            for (final address in state.addresses) ...[
-              AddressTile(
-                icon: iconForType(address.type),
-                title: address.label,
-                subtitle: address.address,
-                isActive: activeSavedId == address.id,
-                onTap: () => onSelect(address),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ],
-        );
-      },
+    /* ================================================= */
+    /* LIST                                              */
+    /* ================================================= */
+
+    return Column(
+      children: [
+        for (final address in ctrl.addresses) ...[
+          AddressTile(
+            icon: iconForType(address.type),
+            title: address.label,
+            subtitle: address.address,
+            isActive: activeSavedId == address.id,
+            onTap: () => onSelect(address),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
     );
   }
-}
-
-/* ===================================================== */
-/* SMALL OPTIMIZED VIEW MODEL (reduces rebuild noise)     */
-/* ===================================================== */
-
-class _SavedViewState {
-  final bool isLoggedIn;
-  final bool isLoading;
-  final List<SavedAddress> addresses;
-
-  _SavedViewState({
-    required this.isLoggedIn,
-    required this.isLoading,
-    required this.addresses,
-  });
 }
