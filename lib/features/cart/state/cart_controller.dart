@@ -12,8 +12,8 @@ import '../services/cart_api.dart';
 /// ⭐ All totals come from backend
 /// ⭐ No price math here
 ///
-class CartController extends ValueNotifier<Cart?> {
-  CartController._() : super(null);
+class CartController extends ValueNotifier<Cart> {
+  CartController._() : super(Cart.empty());
 
   static final instance = CartController._();
 
@@ -30,6 +30,10 @@ class CartController extends ValueNotifier<Cart?> {
     notifyListeners();
   }
 
+  void _setCart(Cart? cart) {
+    value = cart ?? Cart.empty();
+  }
+
   /* ================================================= */
   /* LOAD                                              */
   /* ================================================= */
@@ -38,7 +42,7 @@ class CartController extends ValueNotifier<Cart?> {
     try {
       _setLoading(true);
 
-      value = await CartApi.getCart();
+      _setCart(await CartApi.getCart());
     } finally {
       _setLoading(false);
     }
@@ -56,11 +60,11 @@ class CartController extends ValueNotifier<Cart?> {
     try {
       _setLoading(true);
 
-      value = await CartApi.addItem(
+      _setCart(await CartApi.addItem(
         outletId: outletId,
         productId: productId,
         quantity: quantity,
-      );
+      ));
     } finally {
       _setLoading(false);
     }
@@ -75,12 +79,12 @@ class CartController extends ValueNotifier<Cart?> {
       _setLoading(true);
 
       if (qty <= 0) {
-        value = await CartApi.remove(productId);
+        _setCart(await CartApi.remove(productId));
       } else {
-        value = await CartApi.updateQty(
+        _setCart(await CartApi.updateQty(
           productId: productId,
           quantity: qty,
-        );
+        ));
       }
     } finally {
       _setLoading(false);
@@ -95,7 +99,7 @@ class CartController extends ValueNotifier<Cart?> {
     try {
       _setLoading(true);
 
-      value = await CartApi.remove(productId);
+      _setCart(await CartApi.remove(productId));
     } finally {
       _setLoading(false);
     }
@@ -106,17 +110,13 @@ class CartController extends ValueNotifier<Cart?> {
   /* ================================================= */
 
   void clear() {
-    value = null;
-    notifyListeners();
+    value = Cart.empty();
   }
 
   /* ================================================= */
-  /* 🔥 MERGE LOCAL → SERVER (LOGIN MAGIC)              */
+  /* 🔥 MERGE LOCAL → SERVER                            */
   /* ================================================= */
-  ///
-  /// ⭐ Fast parallel merge
-  /// ⭐ 5–10x faster than sequential
-  ///
+
   Future<void> mergeLocalItems({
     required List<CartItem> localItems,
     required String outletId,
@@ -136,7 +136,7 @@ class CartController extends ValueNotifier<Cart?> {
         ),
       );
 
-      value = await CartApi.getCart();
+      _setCart(await CartApi.getCart());
     } finally {
       _setLoading(false);
     }
@@ -146,14 +146,13 @@ class CartController extends ValueNotifier<Cart?> {
   /* HELPERS                                           */
   /* ================================================= */
 
-  List<CartItem> get items =>
-      List.unmodifiable(value?.items ?? const []);
+  List<CartItem> get items => List.unmodifiable(value.items);
 
-  int get itemCount => value?.itemCount ?? 0;
+  int get itemCount => value.itemCount;
 
-  double get grandTotal => value?.grandTotal ?? 0;
+  double get grandTotal => value.grandTotal;
 
-  bool get isEmpty => items.isEmpty;
+  bool get isEmpty => value.items.isEmpty;
 
-  bool get hasCart => value != null;
+  bool get hasCart => value.items.isNotEmpty;
 }

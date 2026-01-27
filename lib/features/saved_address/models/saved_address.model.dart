@@ -1,6 +1,4 @@
-
 import '../../location/models/location.model.dart';
-
 
 enum SavedAddressType {
   home,
@@ -31,7 +29,6 @@ enum SavedAddressType {
     }
   }
 
-  /// ⭐ UI helper
   String get displayName {
     switch (this) {
       case SavedAddressType.home:
@@ -77,27 +74,23 @@ class SavedAddress {
   /* HELPERS                                                          */
   /* =============================================================== */
 
-  /// GPS available?
   bool get hasCoordinates => lat != null && lng != null;
 
-  /// Safe usable?
   bool get isValid => address.trim().isNotEmpty && !isDeleted;
 
-  /// UI fallback
-  String get displayLabel => label.isEmpty ? 'Address' : label;
+  String get displayLabel =>
+      label.trim().isEmpty ? 'Address' : label;
 
-  /// shorter version for tiles/headers
   String get shortAddress {
-    if (address.length <= 40) return address;
-    return '${address.substring(0, 40)}...';
+    final text = address.trim();
+    if (text.length <= 40) return text;
+    return '${text.substring(0, 40)}...';
   }
 
   /* =============================================================== */
-  /* ⭐ MOST IMPORTANT (bridge to Location system)                     */
+  /* ⭐ BRIDGE → LOCATION SYSTEM                                      */
   /* =============================================================== */
 
-  /// Convert directly → LocationData
-  /// So UI/Controller never manually map fields
   LocationData toLocationData() {
     return LocationData(
       latitude: lat,
@@ -157,6 +150,7 @@ class SavedAddress {
     );
   }
 
+  /// ⭐ create payload
   Map<String, dynamic> toCreateJson() {
     return {
       'type': type.toApi(),
@@ -167,9 +161,9 @@ class SavedAddress {
     };
   }
 
+  /// ⭐ update payload (backend safe)
   Map<String, dynamic> toUpdateJson() {
     return {
-      'label': label,
       'addressText': address,
       'latitude': lat,
       'longitude': lng,
@@ -180,10 +174,6 @@ class SavedAddress {
     if (v == null) return null;
     return DateTime.tryParse(v.toString());
   }
-
-  /* =============================================================== */
-  /* DEBUG                                                            */
-  /* =============================================================== */
 
   @override
   String toString() {

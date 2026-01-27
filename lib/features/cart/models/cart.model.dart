@@ -28,20 +28,38 @@ class Cart {
   });
 
   /* ================================================= */
+  /* EMPTY (for when API returns data: null)           */
+  /* ================================================= */
+
+  factory Cart.empty() => const Cart(
+        id: '',
+        outletId: '',
+        currency: 'INR',
+        items: [],
+        itemCount: 0,
+        subtotal: 0,
+        discount: 0,
+        afterDiscountTotal: 0,
+        deliveryFee: 0,
+        grandTotal: 0,
+      );
+
+  /* ================================================= */
   /* JSON                                              */
   /* ================================================= */
 
   factory Cart.fromJson(Map<String, dynamic> json) {
     return Cart(
-      id: json['id'] ?? '',
-      outletId: json['outletId'] ?? '',
-      currency: json['currency'] ?? 'INR',
+      id: json['id']?.toString() ?? '',
+      outletId: json['outletId']?.toString() ?? '',
+      currency: json['currency']?.toString() ?? 'INR',
 
-      items: (json['items'] as List? ?? [])
+      items: (json['items'] as List<dynamic>? ?? [])
           .map((e) => CartItem.fromJson(e))
           .toList(),
 
-      itemCount: json['itemCount'] ?? 0,
+      // safer int parsing (handles "2" or 2)
+      itemCount: int.tryParse(json['itemCount']?.toString() ?? '0') ?? 0,
 
       subtotal: _d(json['subtotal']),
       discount: _d(json['discount']),
@@ -52,9 +70,9 @@ class Cart {
   }
 
   /* ================================================= */
-  /* SAFE DOUBLE PARSER (handles "120" or 120)         */
+  /* SAFE DOUBLE PARSER                                */
   /* ================================================= */
 
   static double _d(dynamic v) =>
-      double.tryParse(v.toString()) ?? 0;
+      double.tryParse(v?.toString() ?? '0') ?? 0;
 }

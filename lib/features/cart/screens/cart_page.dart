@@ -33,7 +33,7 @@ class CartPage extends StatelessWidget {
                 isLoggedIn ? server.items : local.items;
 
             final itemCount =
-                isLoggedIn ? server.itemCount : local.totalItems;
+                isLoggedIn ? server.itemCount : local.itemCount;
 
             /// ⭐ FIX: local total calc
             final grandTotal = isLoggedIn

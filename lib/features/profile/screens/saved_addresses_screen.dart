@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../saved_address/state/saved_address_controller.dart';
 import '../../saved_address/widgets/saved_address_list.dart';
 import '../../saved_address/screens/add_edit_address_screen.dart';
+import '../../saved_address/models/saved_address.model.dart';
 
 class SavedAddressesScreen extends StatefulWidget {
   const SavedAddressesScreen({super.key});
@@ -15,19 +16,26 @@ class SavedAddressesScreen extends StatefulWidget {
 
 class _SavedAddressesScreenState
     extends State<SavedAddressesScreen> {
+  /* ================================================= */
+  /* INIT                                              */
+  /* ================================================= */
+
   @override
   void initState() {
     super.initState();
 
-    /// load once when page opens
-    Future.microtask(
-      () =>
-          context.read<SavedAddressController>().load(),
-    );
+    /// ⭐ load only if logged in
+    Future.microtask(() {
+      final ctrl = context.read<SavedAddressController>();
+
+      if (ctrl.isLoggedIn) {
+        ctrl.load();
+      }
+    });
   }
 
   /* ================================================= */
-  /* ADD NEW ADDRESS                                   */
+  /* ADD                                               */
   /* ================================================= */
 
   Future<void> _add() async {
@@ -38,17 +46,16 @@ class _SavedAddressesScreenState
       ),
     );
 
-    /// refresh after returning
     if (mounted) {
       context.read<SavedAddressController>().refresh();
     }
   }
 
   /* ================================================= */
-  /* EDIT ADDRESS                                      */
+  /* EDIT                                              */
   /* ================================================= */
 
-  Future<void> _edit(address) async {
+  Future<void> _edit(SavedAddress address) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -63,7 +70,7 @@ class _SavedAddressesScreenState
   }
 
   /* ================================================= */
-  /* UI                                                 */
+  /* UI                                                */
   /* ================================================= */
 
   @override
@@ -79,13 +86,29 @@ class _SavedAddressesScreenState
       /* BODY                                               */
       /* ================================================= */
 
-      body: SafeArea(
-        child: SavedAddressList(
-          showActions: true, // enables delete menu
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SavedAddressList(
+              showActions: true,
 
-          /// tap → edit
-          onSelect: (addr) => _edit(addr),
-        ),
+              /// tap → edit
+              onSelect: (addr) => _edit(addr),
+            ),
+          ),
+
+          /* ================================================= */
+          /* ⭐ LOADING OVERLAY (nice UX)                        */
+          /* ================================================= */
+
+          if (ctrl.isLoading)
+            const ColoredBox(
+              color: Color(0x22000000),
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
 
       /* ================================================= */
@@ -93,17 +116,10 @@ class _SavedAddressesScreenState
       /* ================================================= */
 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _add,
+        onPressed: ctrl.isLoading ? null : _add,
         icon: const Icon(Icons.add),
         label: const Text('Add Address'),
       ),
-
-      /* ================================================= */
-      /* LOADING OVERLAY                                    */
-      /* ================================================= */
-
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.endFloat,
     );
   }
 }

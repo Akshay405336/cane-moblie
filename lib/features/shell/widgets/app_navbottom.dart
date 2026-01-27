@@ -105,7 +105,7 @@ class _CartIcon extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: controller,
       builder: (_, __, ___) {
-        final count = controller.totalItems;
+        final count = controller.itemCount as int;
 
         return Stack(
           clipBehavior: Clip.none,

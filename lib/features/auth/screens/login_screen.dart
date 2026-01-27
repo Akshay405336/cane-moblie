@@ -1,5 +1,7 @@
 /// lib/features/auth/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../features/saved_address/state/saved_address_controller.dart';
 
 import '../../../utils/validators.dart';
 import '../../../utils/app_toast.dart';
@@ -41,32 +43,39 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> _sendOtp() async {
-    final phoneInput = _phoneController.text;
+Future<void> _sendOtp() async {
+  final phoneInput = _phoneController.text;
 
-    if (!Validators.isValidPhoneInput(phoneInput)) {
-      AppToast.error('Enter a valid 10-digit mobile number');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    final success = await CustomerAuthApi.requestOtp(phoneInput);
-
-    setState(() => _isLoading = false);
-
-    if (!success || !mounted) return;
-
-    final result = await Navigator.pushNamed(
-      context,
-      AppRoutes.otp,
-      arguments: phoneInput,
-    );
-
-    if (result == true && mounted) {
-      Navigator.pop(context, true);
-    }
+  if (!Validators.isValidPhoneInput(phoneInput)) {
+    AppToast.error('Enter a valid 10-digit mobile number');
+    return;
   }
+
+  setState(() => _isLoading = true);
+
+  final success = await CustomerAuthApi.requestOtp(phoneInput);
+
+  setState(() => _isLoading = false);
+
+  if (!success || !mounted) return;
+
+  final result = await Navigator.pushNamed(
+    context,
+    AppRoutes.otp,
+    arguments: phoneInput,
+  );
+
+  /* ================================================= */
+  /* ⭐ LOGIN SUCCESS → LOAD SAVED ADDRESSES            */
+  /* ================================================= */
+
+  if (result == true && mounted) {
+    // ⭐ VERY IMPORTANT
+    await context.read<SavedAddressController>().refresh();
+
+    Navigator.pop(context, true);
+  }
+}
 
   void _skipLogin() {
     if (Navigator.canPop(context)) {

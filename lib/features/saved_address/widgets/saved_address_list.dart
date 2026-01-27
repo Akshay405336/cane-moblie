@@ -34,15 +34,19 @@ class SavedAddressList extends StatelessWidget {
         error: c.error,
         addresses: c.addresses,
       ),
+
+      /// ⭐ IMPORTANT → prevents useless rebuilds safely
+      shouldRebuild: (prev, next) => prev != next,
+
       builder: (_, state, __) {
         /* ================================================= */
         /* LOADING                                           */
         /* ================================================= */
 
         if (state.isLoading) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           );
@@ -54,9 +58,12 @@ class SavedAddressList extends StatelessWidget {
 
         if (state.hasError) {
           return Center(
-            child: Text(
-              state.error ?? 'Something went wrong',
-              style: const TextStyle(color: Colors.grey),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                state.error ?? 'Something went wrong',
+                style: const TextStyle(color: Colors.grey),
+              ),
             ),
           );
         }
@@ -66,9 +73,9 @@ class SavedAddressList extends StatelessWidget {
         /* ================================================= */
 
         if (state.addresses.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(
               child: Text(
                 'No saved addresses yet',
                 style: TextStyle(color: Colors.grey),
@@ -95,12 +102,14 @@ class SavedAddressList extends StatelessWidget {
           ],
         ];
 
-        /// ⭐ selection mode (bottom sheet) → Column
+        /// ⭐ bottom sheet → scroll safe
         if (_isSelectionMode) {
-          return Column(children: children);
+          return SingleChildScrollView(
+            child: Column(children: children),
+          );
         }
 
-        /// ⭐ profile screen → scrollable
+        /// ⭐ profile screen → scroll list
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: children,
@@ -111,7 +120,7 @@ class SavedAddressList extends StatelessWidget {
 }
 
 /* ===================================================== */
-/* ADDRESS CARD (modern UI)                              */
+/* ADDRESS CARD                                          */
 /* ===================================================== */
 
 class _AddressCard extends StatelessWidget {
@@ -172,15 +181,15 @@ class _AddressCard extends StatelessWidget {
                 ),
               ),
 
-              /* ============================================= */
-              /* TRAILING                                       */
-              /* ============================================= */
-
               if (showActions)
                 PopupMenuButton<String>(
-                  onSelected: (v) {
+                  onSelected: (v) async {
                     if (v == 'delete') {
-                      ctrl.delete(address.id);
+                      final ok = await _confirmDelete(context);
+
+                      if (ok == true) {
+                        ctrl.delete(address.id);
+                      }
                     }
                   },
                   itemBuilder: (_) => const [
@@ -200,10 +209,34 @@ class _AddressCard extends StatelessWidget {
       ),
     );
   }
+
+  Future<bool?> _confirmDelete(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete address?'),
+        content:
+            const Text('This address will be removed permanently.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /* ===================================================== */
-/* VIEW STATE (optimized rebuilds)                        */
+/* VIEW STATE (fixed equality ⭐)                         */
 /* ===================================================== */
 
 class _ViewState {
@@ -218,10 +251,21 @@ class _ViewState {
     required this.error,
     required this.addresses,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ViewState &&
+        other.isLoading == isLoading &&
+        other.hasError == hasError &&
+        other.error == error &&
+        other.addresses == addresses; // ⭐ FIXED
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(isLoading, hasError, error, addresses);
 }
 
-/* ===================================================== */
-/* ICON HELPER                                           */
 /* ===================================================== */
 
 IconData _iconForType(SavedAddressType type) {

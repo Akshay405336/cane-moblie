@@ -1,5 +1,5 @@
 class CartItem {
-  final String id; // ⭐ added (important)
+  final String id;
   final String productId;
 
   final String name;
@@ -28,32 +28,44 @@ class CartItem {
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
-      id: json['id'] ?? '',
-      productId: json['productId'] ?? '',
-      name: json['productName'] ?? '',
-      image: json['productImage'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      id: json['id']?.toString() ?? '',
+      productId: json['productId']?.toString() ?? '',
+
+      name: json['productName']?.toString() ?? '',
+      image: json['productImage']?.toString() ?? '',
+
+      // safer int parsing (handles "2" or 2)
+      quantity: _i(json['quantity']),
+
       unitPrice: _d(json['unitPrice']),
-      discountPrice: json['discountPrice'] != null
-          ? _d(json['discountPrice'])
-          : null,
-      lineTotal: json['lineTotal'] != null
-          ? _d(json['lineTotal'])
-          : null,
+
+      discountPrice:
+          json['discountPrice'] != null ? _d(json['discountPrice']) : null,
+
+      lineTotal:
+          json['lineTotal'] != null ? _d(json['lineTotal']) : null,
     );
   }
 
+  /* ================================================= */
+  /* SAFE PARSERS                                      */
+  /* ================================================= */
+
   static double _d(dynamic v) =>
-      double.tryParse(v.toString()) ?? 0;
+      double.tryParse(v?.toString() ?? '0') ?? 0;
+
+  static int _i(dynamic v) =>
+      int.tryParse(v?.toString() ?? '0') ?? 0;
 
   /* ================================================= */
   /* HELPERS                                           */
   /* ================================================= */
 
+  /// Final price per unit (discount if exists)
   double get price => discountPrice ?? unitPrice;
 
-  double get total =>
-      lineTotal ?? (price * quantity);
+  /// Total price for this line
+  double get total => lineTotal ?? (price * quantity);
 
   /* ================================================= */
   /* COPY                                              */

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
 
+import '../../location/services/location_service.dart';
 import '../models/saved_address.model.dart';
 import '../state/saved_address_controller.dart';
 
@@ -28,6 +28,12 @@ class _AddEditAddressScreenState
   late TextEditingController _addressCtrl;
 
   SavedAddressType _type = SavedAddressType.home;
+
+  bool _saving = false;
+
+  /* ================================================= */
+  /* INIT                                               */
+  /* ================================================= */
 
   @override
   void initState() {
@@ -56,23 +62,65 @@ class _AddEditAddressScreenState
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    setState(() => _saving = true);
+
     final ctrl = context.read<SavedAddressController>();
 
-    final model = SavedAddress(
-      id: widget.address?.id ?? const Uuid().v4(),
-      customerId: widget.address?.customerId ?? '',
-      label: _labelCtrl.text.trim(),
-      address: _addressCtrl.text.trim(),
-      type: _type,
-    );
+    try {
+      /* --------------------------------------------- */
+      /* ⭐ 1. GEOCODE TEXT → LAT/LNG                   */
+      /* --------------------------------------------- */
 
-    if (widget.isEdit) {
-      await ctrl.update(model);
-    } else {
-      await ctrl.create(model);
+      final geo = await LocationService.geocodeAddress(
+        _addressCtrl.text.trim(),
+      );
+
+      if (geo == null || !geo.hasCoordinates) {
+        _showError('Unable to detect coordinates for address');
+        return;
+      }
+
+      /* --------------------------------------------- */
+      /* ⭐ 2. BUILD MODEL                              */
+      /* --------------------------------------------- */
+
+      final model = SavedAddress(
+        /// ⭐ DO NOT create id for new
+        id: widget.address?.id ?? '',
+        customerId: widget.address?.customerId ?? '',
+
+        label: _labelCtrl.text.trim(),
+        address: _addressCtrl.text.trim(),
+        type: _type,
+
+        lat: geo.latitude,
+        lng: geo.longitude,
+      );
+
+      /* --------------------------------------------- */
+      /* ⭐ 3. SAVE                                     */
+      /* --------------------------------------------- */
+
+      if (widget.isEdit) {
+        await ctrl.update(model);
+      } else {
+        await ctrl.create(model);
+      }
+
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
+  }
 
-    if (mounted) Navigator.pop(context);
+  /* ================================================= */
+  /* ERROR                                              */
+  /* ================================================= */
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
   }
 
   /* ================================================= */
@@ -98,8 +146,8 @@ class _AddEditAddressScreenState
                 decoration:
                     const InputDecoration(labelText: 'Label'),
                 validator: (v) =>
-                    v == null || v.length < 2
-                        ? 'Enter label'
+                    v == null || v.trim().length < 2
+                        ? 'Minimum 2 characters'
                         : null,
               ),
 
@@ -108,10 +156,11 @@ class _AddEditAddressScreenState
               /* ADDRESS */
               TextFormField(
                 controller: _addressCtrl,
+                maxLines: 2,
                 decoration:
                     const InputDecoration(labelText: 'Address'),
                 validator: (v) =>
-                    v == null || v.isEmpty
+                    v == null || v.trim().isEmpty
                         ? 'Enter address'
                         : null,
               ),
@@ -125,7 +174,7 @@ class _AddEditAddressScreenState
                     .map(
                       (e) => DropdownMenuItem(
                         value: e,
-                        child: Text(e.name.toUpperCase()),
+                        child: Text(e.displayName),
                       ),
                     )
                     .toList(),
@@ -140,8 +189,17 @@ class _AddEditAddressScreenState
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _save,
-                  child: const Text('Save'),
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Save'),
                 ),
               ),
             ],

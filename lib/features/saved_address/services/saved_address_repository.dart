@@ -7,12 +7,14 @@ class SavedAddressRepository {
   SavedAddressRepository._();
 
   /* ================================================= */
-  /* CACHE (optional but useful)                       */
+  /* CACHE                                             */
   /* ================================================= */
 
   static List<SavedAddress> _cache = [];
 
-  static List<SavedAddress> get cached => _cache;
+  /// never expose mutable list
+  static List<SavedAddress> get cached =>
+      List.unmodifiable(_cache);
 
   /* ================================================= */
   /* GET ALL                                           */
@@ -21,16 +23,25 @@ class SavedAddressRepository {
   static Future<List<SavedAddress>> getAll({
     bool forceRefresh = false,
   }) async {
-    if (!forceRefresh && _cache.isNotEmpty) {
-      return _cache;
+    try {
+      if (!forceRefresh && _cache.isNotEmpty) {
+        debugPrint('📦 repo.getAll → from cache (${_cache.length})');
+        return cached;
+      }
+
+      debugPrint('🌐 repo.getAll → fetching from API');
+
+      final list = await SavedAddressApi.getAll();
+
+      _cache = list.where((e) => !e.isDeleted).toList();
+
+      debugPrint('✅ repo.getAll → fetched ${_cache.length}');
+
+      return cached;
+    } catch (e) {
+      debugPrint('❌ repo.getAll → $e');
+      rethrow;
     }
-
-    final list = await SavedAddressApi.getAll();
-
-    // filter soft deleted
-    _cache = list.where((e) => !e.isDeleted).toList();
-
-    return _cache;
   }
 
   /* ================================================= */
@@ -39,6 +50,8 @@ class SavedAddressRepository {
 
   static Future<SavedAddress?> getById(String id) async {
     try {
+      debugPrint('📡 repo.getById → $id');
+
       final address = await SavedAddressApi.getById(id);
 
       if (address.isDeleted) return null;
@@ -57,11 +70,22 @@ class SavedAddressRepository {
   static Future<SavedAddress> create(
     SavedAddress address,
   ) async {
-    final created = await SavedAddressApi.create(address);
+    try {
+      debugPrint('📡 repo.create');
 
-    _cache = [..._cache, created];
+      final created = await SavedAddressApi.create(address);
 
-    return created;
+      if (!created.isDeleted) {
+        _cache = [..._cache, created];
+      }
+
+      debugPrint('✅ repo.create → ${created.id}');
+
+      return created;
+    } catch (e) {
+      debugPrint('❌ repo.create → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -71,13 +95,23 @@ class SavedAddressRepository {
   static Future<SavedAddress> update(
     SavedAddress address,
   ) async {
-    final updated = await SavedAddressApi.update(address);
+    try {
+      debugPrint('📡 repo.update → ${address.id}');
 
-    _cache = _cache
-        .map((e) => e.id == updated.id ? updated : e)
-        .toList();
+      final updated = await SavedAddressApi.update(address);
 
-    return updated;
+      _cache = _cache
+          .map((e) => e.id == updated.id ? updated : e)
+          .where((e) => !e.isDeleted)
+          .toList();
+
+      debugPrint('✅ repo.update → done');
+
+      return updated;
+    } catch (e) {
+      debugPrint('❌ repo.update → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -85,9 +119,18 @@ class SavedAddressRepository {
   /* ================================================= */
 
   static Future<void> delete(String id) async {
-    await SavedAddressApi.delete(id);
+    try {
+      debugPrint('📡 repo.delete → $id');
 
-    _cache = _cache.where((e) => e.id != id).toList();
+      await SavedAddressApi.delete(id);
+
+      _cache = _cache.where((e) => e.id != id).toList();
+
+      debugPrint('✅ repo.delete → removed');
+    } catch (e) {
+      debugPrint('❌ repo.delete → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -95,6 +138,7 @@ class SavedAddressRepository {
   /* ================================================= */
 
   static void clearCache() {
+    debugPrint('🗑 repo.clearCache');
     _cache = [];
   }
 }

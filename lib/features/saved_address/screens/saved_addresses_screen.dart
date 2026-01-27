@@ -15,18 +15,28 @@ class SavedAddressesScreen extends StatefulWidget {
 
 class _SavedAddressesScreenState
     extends State<SavedAddressesScreen> {
+  /* ================================================= */
+  /* INIT                                               */
+  /* ================================================= */
+
   @override
   void initState() {
     super.initState();
 
-    /// load once
-    Future.microtask(
-      () => context.read<SavedAddressController>().load(),
-    );
+    /// ⭐ safer than microtask
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SavedAddressController>().load();
+    });
   }
+
+  /* ================================================= */
+  /* UI                                                 */
+  /* ================================================= */
 
   @override
   Widget build(BuildContext context) {
+    final ctrl = context.watch<SavedAddressController>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Addresses'),
@@ -36,33 +46,73 @@ class _SavedAddressesScreenState
       /* LIST                                               */
       /* ================================================= */
 
-      body: const SavedAddressList(
-        showActions: true, // delete enabled
-      ),
+      body: ctrl.isEmpty && !ctrl.isLoading
+          ? _EmptyState(onAdd: _openAdd)
+          : const SavedAddressList(
+              showActions: true, // delete enabled
+            ),
 
       /* ================================================= */
       /* ADD BUTTON                                         */
       /* ================================================= */
 
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  const AddEditAddressScreen(),
-            ),
-          );
-
-          /// refresh after coming back
-          if (context.mounted) {
-            context
-                .read<SavedAddressController>()
-                .refresh();
-          }
-        },
+        onPressed: _openAdd,
         icon: const Icon(Icons.add),
         label: const Text('Add Address'),
+      ),
+    );
+  }
+
+  /* ================================================= */
+  /* NAVIGATION                                         */
+  /* ================================================= */
+
+  Future<void> _openAdd() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddEditAddressScreen(),
+      ),
+    );
+
+    /// ⭐ usually NOT required because controller updates cache
+    /// but keep if you want server re-sync
+    // context.read<SavedAddressController>().refresh();
+  }
+}
+
+/* ===================================================== */
+/* EMPTY STATE (better UX)                               */
+/* ===================================================== */
+
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _EmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.location_on_outlined,
+            size: 54,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No saved addresses yet',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: onAdd,
+            child: const Text('Add your first address'),
+          ),
+        ],
       ),
     );
   }

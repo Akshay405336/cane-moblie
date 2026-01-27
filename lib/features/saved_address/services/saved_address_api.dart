@@ -7,7 +7,7 @@ import '../models/saved_address.model.dart';
 class SavedAddressApi {
   SavedAddressApi._();
 
-  /// ⭐ use shared Dio (VERY IMPORTANT)
+  /// ⭐ shared Dio
   static final Dio _dio = AppHttpClient.dio;
 
   static const String _base = '/saved-addresses';
@@ -18,15 +18,21 @@ class SavedAddressApi {
 
   static Future<List<SavedAddress>> getAll() async {
     try {
+      debugPrint('📡 API → GET $_base');
+
       final res = await _dio.get(_base);
 
-      final List list = res.data['data'] ?? [];
+      final list = (res.data?['data'] as List?) ?? [];
 
-      return list
+      final addresses = list
           .map((e) => SavedAddress.fromJson(
                 Map<String, dynamic>.from(e),
               ))
           .toList();
+
+      debugPrint('✅ fetched ${addresses.length} saved addresses');
+
+      return addresses;
     } catch (e) {
       debugPrint('❌ SavedAddressApi.getAll → $e');
       rethrow;
@@ -38,8 +44,16 @@ class SavedAddressApi {
   /* ================================================= */
 
   static Future<SavedAddress> getById(String id) async {
-    final res = await _dio.get('$_base/$id');
-    return SavedAddress.fromJson(res.data['data']);
+    try {
+      debugPrint('📡 API → GET $_base/$id');
+
+      final res = await _dio.get('$_base/$id');
+
+      return SavedAddress.fromJson(res.data['data']);
+    } catch (e) {
+      debugPrint('❌ SavedAddressApi.getById → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -49,12 +63,24 @@ class SavedAddressApi {
   static Future<SavedAddress> create(
     SavedAddress address,
   ) async {
-    final res = await _dio.post(
-      _base,
-      data: address.toCreateJson(),
-    );
+    try {
+      debugPrint('📡 API → CREATE address');
 
-    return SavedAddress.fromJson(res.data['data']);
+      final res = await _dio.post(
+        _base,
+        data: address.toCreateJson(),
+      );
+
+      final created =
+          SavedAddress.fromJson(res.data['data']);
+
+      debugPrint('✅ created → ${created.id}');
+
+      return created;
+    } catch (e) {
+      debugPrint('❌ SavedAddressApi.create → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -64,12 +90,24 @@ class SavedAddressApi {
   static Future<SavedAddress> update(
     SavedAddress address,
   ) async {
-    final res = await _dio.post(
-      '$_base/${address.id}/update',
-      data: address.toUpdateJson(),
-    );
+    try {
+      debugPrint('📡 API → UPDATE ${address.id}');
 
-    return SavedAddress.fromJson(res.data['data']);
+      final res = await _dio.post(
+        '$_base/${address.id}/update',
+        data: address.toUpdateJson(),
+      );
+
+      final updated =
+          SavedAddress.fromJson(res.data['data']);
+
+      debugPrint('✅ updated → ${updated.id}');
+
+      return updated;
+    } catch (e) {
+      debugPrint('❌ SavedAddressApi.update → $e');
+      rethrow;
+    }
   }
 
   /* ================================================= */
@@ -77,6 +115,15 @@ class SavedAddressApi {
   /* ================================================= */
 
   static Future<void> delete(String id) async {
-    await _dio.post('$_base/$id/delete');
+    try {
+      debugPrint('📡 API → DELETE $id');
+
+      await _dio.post('$_base/$id/delete');
+
+      debugPrint('✅ deleted → $id');
+    } catch (e) {
+      debugPrint('❌ SavedAddressApi.delete → $e');
+      rethrow;
+    }
   }
 }

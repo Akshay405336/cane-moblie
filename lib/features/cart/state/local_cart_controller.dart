@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/cart_item.model.dart';
 import 'package:uuid/uuid.dart';
+import '../models/cart_item.model.dart';
 
 /// =================================================
 /// LOCAL CART (Guest only)
@@ -9,7 +9,6 @@ import 'package:uuid/uuid.dart';
 /// • Used before login only
 /// • Temporary memory cart
 /// • No backend
-/// • No money logic from server
 /// • Merged into server cart after login
 ///
 class LocalCartController extends ValueNotifier<List<CartItem>> {
@@ -17,52 +16,58 @@ class LocalCartController extends ValueNotifier<List<CartItem>> {
 
   static final instance = LocalCartController._();
 
+  static const _uuid = Uuid();
+
   /* ================================================= */
   /* INTERNAL HELPER                                   */
   /* ================================================= */
 
   List<CartItem> _clone() => [...value];
 
+  void _set(List<CartItem> items) {
+    value = List.unmodifiable(items);
+  }
+
   /* ================================================= */
   /* ADD ITEM                                          */
   /* ================================================= */
 
   void addItem({
-  required String productId,
-  required String name,
-  required String image,
-  required double unitPrice,
-  double? discountPrice,
-  int quantity = 1,
-}) {
-  final items = _clone();
+    required String productId,
+    required String name,
+    required String image,
+    required double unitPrice,
+    double? discountPrice,
+    int quantity = 1,
+  }) {
+    final items = _clone();
 
-  final index =
-      items.indexWhere((e) => e.productId == productId);
+    final index =
+        items.indexWhere((e) => e.productId == productId);
 
-  if (index >= 0) {
-    final current = items[index];
+    if (index >= 0) {
+      final current = items[index];
 
-    items[index] = current.copyWith(
-      quantity: current.quantity + quantity,
-    );
-  } else {
-    items.add(
-      CartItem(
-        id: const Uuid().v4(), // ⭐ FIX HERE
-        productId: productId,
-        name: name,
-        image: image,
-        quantity: quantity,
-        unitPrice: unitPrice,
-        discountPrice: discountPrice,
-        lineTotal: null,
-      ),
-    );
+      items[index] = current.copyWith(
+        quantity: current.quantity + quantity,
+      );
+    } else {
+      items.add(
+        CartItem(
+          id: _uuid.v4(),
+          productId: productId,
+          name: name,
+          image: image,
+          quantity: quantity,
+          unitPrice: unitPrice,
+          discountPrice: discountPrice,
+          lineTotal: null,
+        ),
+      );
+    }
+
+    _set(items);
   }
-
-  value = items;
-}
 
   /* ================================================= */
   /* UPDATE QTY                                        */
@@ -83,7 +88,7 @@ class LocalCartController extends ValueNotifier<List<CartItem>> {
           items[index].copyWith(quantity: qty);
     }
 
-    value = items;
+    _set(items);
   }
 
   /* ================================================= */
@@ -91,9 +96,7 @@ class LocalCartController extends ValueNotifier<List<CartItem>> {
   /* ================================================= */
 
   void remove(String productId) {
-    value = value
-        .where((e) => e.productId != productId)
-        .toList();
+    _set(value.where((e) => e.productId != productId).toList());
   }
 
   /* ================================================= */
@@ -101,16 +104,17 @@ class LocalCartController extends ValueNotifier<List<CartItem>> {
   /* ================================================= */
 
   void clear() {
-    value = const [];
+    _set(const []);
   }
 
   /* ================================================= */
-  /* HELPERS                                           */
+  /* HELPERS (match server cart naming)                 */
   /* ================================================= */
 
-  List<CartItem> get items => List.unmodifiable(value);
+  List<CartItem> get items => value;
 
-  int get totalItems =>
+  /// ⭐ keep naming consistent with server Cart.itemCount
+  int get itemCount =>
       value.fold(0, (sum, e) => sum + e.quantity);
 
   double get subtotal =>
