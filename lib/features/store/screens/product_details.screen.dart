@@ -110,7 +110,10 @@ class _ProductDetailsScreenState
       /* ================= BOTTOM BAR ================= */
 
       bottomNavigationBar:
-          _BottomAddBar(product: _product),
+    _BottomAddBar(
+      product: _product,
+      outletId: widget.outletId,
+    ),
     );
   }
 }
@@ -234,24 +237,33 @@ class _DescriptionSection extends StatelessWidget {
 
 class _BottomAddBar extends StatelessWidget {
   final Product product;
+  final String outletId;
 
-  const _BottomAddBar({required this.product});
+  const _BottomAddBar({
+    required this.product,
+    required this.outletId,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(HomeSpacing.md),
-      child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
-        children: [
-          ProductPriceView(
-            product: product,
-            showDiscountText: true,
-          ),
-          const ProductAddButton(),
-        ],
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  return Container(
+    padding: const EdgeInsets.all(HomeSpacing.md),
+    child: Row(
+      mainAxisAlignment:
+          MainAxisAlignment.spaceBetween,
+      children: [
+        ProductPriceView(
+          product: product,
+          showDiscountText: true,
+        ),
+
+        /// ⭐ UPDATED
+        ProductAddButton(
+          product: product,
+          outletId: outletId,
+        ),
+      ],
+    ),
+  );
+}
 }

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'routes.dart';
+
 import './features/home/services/category_socket_service.dart';
 import './utils/app_lifecycle_handler.dart';
+
+/// ⭐ ADD THESE
+import './features/location/state/location_controller.dart';
+import './features/saved_address/state/saved_address_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +21,20 @@ void main() {
   /// ✅ Only categories warmup globally
   CategorySocketService.connect();
 
-  runApp(const CaneAndTenderApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        /// ⭐ REQUIRED (THIS WAS MISSING)
+        ChangeNotifierProvider(
+          create: (_) => LocationController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SavedAddressController(),
+        ),
+      ],
+      child: const CaneAndTenderApp(),
+    ),
+  );
 }
 
 class CaneAndTenderApp extends StatelessWidget {

@@ -5,8 +5,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 
-import '../env.dart';
-import '../utils/secure_storage.dart';
+import '../../env.dart';
+import '../../utils/secure_storage.dart';
 import 'auth_headers.dart';
 import 'token_interceptor.dart';
 

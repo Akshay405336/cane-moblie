@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../env.dart';
 import '../../home/theme/home_colors.dart';
 import '../../home/theme/home_spacing.dart';
 
 /// Product image gallery
 /// Used only in ProductDetailsScreen
 class ProductImageGallery extends StatefulWidget {
-  /// ✅ FULL URL
   final String mainImageUrl;
-
-  /// ✅ FULL URLs
   final List<String> galleryImageUrls;
 
   const ProductImageGallery({
@@ -29,22 +27,34 @@ class _ProductImageGalleryState
 
   bool get _hasGallery => _images.length > 1;
 
+  /* ================================================= */
+  /* SAFE URL BUILDER ⭐                                */
+  /* ================================================= */
+
+  String _buildUrl(String path) {
+    if (path.isEmpty) return '';
+
+    if (path.startsWith('http')) return path;
+
+    final base = Env.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final clean = path.replaceAll(RegExp(r'^/'), '');
+
+    return '$base/$clean';
+  }
+
   @override
   void initState() {
     super.initState();
 
-    /// Remove empty & duplicate images
-    final uniqueGalleryImages = widget.galleryImageUrls
-        .where((url) =>
-            url.trim().isNotEmpty &&
-            url != widget.mainImageUrl)
+    final main = _buildUrl(widget.mainImageUrl);
+
+    final gallery = widget.galleryImageUrls
+        .where((e) => e.trim().isNotEmpty)
+        .map(_buildUrl)
+        .where((e) => e != main)
         .toList();
 
-    /// MAIN IMAGE ALWAYS FIRST
-    _images = [
-      widget.mainImageUrl,
-      ...uniqueGalleryImages,
-    ];
+    _images = [main, ...gallery];
   }
 
   @override
@@ -101,8 +111,8 @@ class _ProductImageGalleryState
           _currentIndex = index;
         });
       },
-      itemBuilder: (context, index) {
-        return _NetworkImage(url: _images[index]);
+      itemBuilder: (_, index) {
+        return _SafeNetworkImage(url: _images[index]);
       },
     );
   }
@@ -110,26 +120,37 @@ class _ProductImageGalleryState
   /* ================= SINGLE IMAGE ================= */
 
   Widget _buildSingleImage() {
-    return _NetworkImage(url: _images.first);
+    return _SafeNetworkImage(url: _images.first);
   }
 }
 
 /* ================================================= */
-/* NETWORK IMAGE (REUSABLE & SAFE)                    */
+/* SAFE NETWORK IMAGE ⭐                              */
 /* ================================================= */
 
-class _NetworkImage extends StatelessWidget {
+class _SafeNetworkImage extends StatelessWidget {
   final String url;
 
-  const _NetworkImage({required this.url});
+  const _SafeNetworkImage({required this.url});
 
   @override
   Widget build(BuildContext context) {
+    if (url.isEmpty) {
+      return const Center(
+        child: Icon(
+          Icons.image_not_supported,
+          size: 32,
+          color: HomeColors.textLightGrey,
+        ),
+      );
+    }
+
     return Image.network(
       url,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+
         return const Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
@@ -137,13 +158,15 @@ class _NetworkImage extends StatelessWidget {
           ),
         );
       },
-      errorBuilder: (_, __, ___) => const Center(
-        child: Icon(
-          Icons.broken_image,
-          size: 32,
-          color: HomeColors.textLightGrey,
-        ),
-      ),
+      errorBuilder: (_, __, ___) {
+        return const Center(
+          child: Icon(
+            Icons.broken_image,
+            size: 32,
+            color: HomeColors.textLightGrey,
+          ),
+        );
+      },
     );
   }
 }
@@ -155,9 +178,7 @@ class _NetworkImage extends StatelessWidget {
 class _IndicatorDot extends StatelessWidget {
   final bool isActive;
 
-  const _IndicatorDot({
-    required this.isActive,
-  });
+  const _IndicatorDot({required this.isActive});
 
   @override
   Widget build(BuildContext context) {

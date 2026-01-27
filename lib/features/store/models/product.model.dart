@@ -3,22 +3,20 @@ import '../../home/models/category.model.dart';
 import 'product_unit.model.dart';
 import 'product_rating.model.dart';
 
-/// Public Product model
-/// Used for HOME / PRODUCT LIST / PRODUCT DETAILS
+import '../../cart/models/cart_item.model.dart';
+
 class Product {
   final String id;
 
-  /// backend no longer sends category
   final Category category;
 
   final String name;
   final String slug;
 
-  /// backend sends single "price"
   final double originalPrice;
   final double? discountPrice;
 
-  /// backend sends "image"
+  /// RELATIVE path from backend
   final String mainImage;
   final List<String> galleryImages;
 
@@ -49,61 +47,87 @@ class Product {
   });
 
   /* ================================================= */
-  /* JSON → PRODUCT  ⭐ FIXED FOR PUBLIC API            */
+  /* SAFE HELPERS                                      */
+  /* ================================================= */
+
+  static double _toDouble(dynamic v) {
+    if (v == null) return 0;
+    return (v as num).toDouble();
+  }
+
+  /* ================================================= */
+  /* JSON → PRODUCT (🔥 FIXED)                         */
   /* ================================================= */
 
   factory Product.fromJson(Map<String, dynamic> json) {
-  return Product(
-    id: json['id'] as String,
+    return Product(
+      id: json['id'] ?? '',
 
-    /// backend doesn't send category
-    category: Category.empty(),
+      category: Category.empty(),
 
-    name: json['name'] as String,
-    slug: json['slug'] as String,
+      name: json['productName'] ?? json['name'] ?? '',
+      slug: json['slug'] ?? '',
 
-    /// ⭐ SAFE parsing (handles "90" or 90)
-    originalPrice:
-        double.parse(json['price'].toString()),
-    discountPrice: null,
+      /// 🔥 FIX: use backend fields
+      originalPrice: _toDouble(
+        json['originalPrice'] ?? json['price'],
+      ),
 
-    mainImage: json['image'] ?? '',
+      discountPrice: json['discountPrice'] != null
+          ? _toDouble(json['discountPrice'])
+          : null,
 
-    galleryImages:
-        List<String>.from(json['galleryImages'] ?? []),
+      /// 🔥 FIX: correct key
+      mainImage:
+          json['mainImage'] ?? json['image'] ?? '',
 
-    unit: ProductUnit(
-      value: json['unitValue'] ?? 0,
-      type: json['unitType'] ?? '',
-    ),
+      galleryImages:
+          List<String>.from(json['galleryImages'] ?? []),
 
-    tags: List<String>.from(json['tags'] ?? []),
+      unit: ProductUnit(
+        value: json['unitValue'] ?? 0,
+        type: json['unitType'] ?? '',
+      ),
 
-    rating: ProductRating(
-      average: double.parse(
-          json['ratingAverage'].toString()),
-      count: json['ratingCount'] ?? 0,
-    ),
+      tags: List<String>.from(json['tags'] ?? []),
 
-    shortDescription: json['shortDescription'],
-    longDescription: json['longDescription'],
+      rating: ProductRating(
+        average: _toDouble(json['ratingAverage']),
+        count: json['ratingCount'] ?? 0,
+      ),
 
-    isTrending: json['isTrending'] ?? false,
-  );
-}
+      shortDescription: json['shortDescription'],
+      longDescription: json['longDescription'],
+
+      isTrending: json['isTrending'] ?? false,
+    );
+  }
+
+  /* ================================================= */
+  /* IMAGE BUILDER                                     */
+  /* ================================================= */
+
+  String _buildUrl(String path) {
+    if (path.isEmpty) return '';
+
+    if (path.startsWith('http')) return path;
+
+    final base =
+        Env.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final clean =
+        path.replaceAll(RegExp(r'^/'), '');
+
+    return '$base/$clean';
+  }
 
   /* ================================================= */
   /* IMAGE HELPERS                                     */
   /* ================================================= */
 
-  String get mainImageUrl =>
-      '${Env.baseUrl}/$mainImage';
+  String get mainImageUrl => _buildUrl(mainImage);
 
   List<String> get galleryImageUrls =>
-      galleryImages
-          .where((e) => e.isNotEmpty)
-          .map((e) => '${Env.baseUrl}/$e')
-          .toList();
+      galleryImages.map(_buildUrl).toList();
 
   /* ================================================= */
   /* UI HELPERS                                        */
@@ -118,11 +142,39 @@ class Product {
 
   int get discountPercent {
     if (!hasDiscount) return 0;
+
     return (((originalPrice - discountPrice!) /
                 originalPrice) *
             100)
         .round();
   }
+
+  /* ================================================= */
+/* CART HELPERS (🔥 add this block)                   */
+/* ================================================= */
+
+/// unified image for cart/UI
+String get image => mainImageUrl;
+
+/// original price for cart math
+double get price => originalPrice;
+
+/// discount price if exists
+double? get discount => discountPrice;
+
+/// 🔥 direct converter (super clean)
+CartItem toCartItem({int quantity = 1}) {
+  return CartItem(
+    id: id, // CartItem now requires id
+    productId: id,
+    name: name,
+    image: image,
+    quantity: quantity,
+    unitPrice: price,
+    discountPrice: discount,
+    lineTotal: null,
+  );
+}
 
   /* ================================================= */
   /* COPY WITH                                         */

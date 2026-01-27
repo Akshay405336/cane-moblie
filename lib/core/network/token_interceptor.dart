@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
-import '../env.dart';
-import '../utils/secure_storage.dart';
+import '../../env.dart';
+import '../../utils/secure_storage.dart';
 import 'api_endpoints.dart';
 import 'auth_headers.dart';
 

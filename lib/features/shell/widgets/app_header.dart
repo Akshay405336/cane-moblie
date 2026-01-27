@@ -1,230 +1,174 @@
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:provider/provider.dart';
 
 import '../../../routes.dart';
+import '../../location/state/location_controller.dart';
 import '../../../utils/auth_state.dart';
-import '../../../utils/location_state.dart';
 
 class AppHeader extends StatelessWidget
     implements PreferredSizeWidget {
-  final VoidCallback onAuthChanged;
   final VoidCallback onLocationTap;
 
   const AppHeader({
-    Key? key,
-    required this.onAuthChanged,
+    super.key,
     required this.onLocationTap,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(72);
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<LocationHeaderState>(
-      valueListenable: LocationHeaderController.instance,
-      builder: (context, state, _) {
-        final isLoggedIn = AuthState.isAuthenticated;
-        final isDetecting = state.isDetecting;
-        final hasLocation = state.hasLocation;
+    final isLoggedIn = AuthState.isAuthenticated;
 
-        return AppBar(
-          elevation: 0,
-          backgroundColor: const Color(0xFFE6F4EA),
+    return AppBar(
+      elevation: 0,
+      backgroundColor: const Color(0xFFE6F4EA),
 
-          /* ================= LOCATION ================= */
+      /* ================================================= */
+      /* LOCATION (only this part listens to controller)    */
+      /* ================================================= */
 
-          title: InkWell(
-            borderRadius: BorderRadius.circular(12),
+      title: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onLocationTap,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: _LocationText(),
+        ),
+      ),
 
-            /// ⭐ disable when detecting
-            onTap:
-                (!isDetecting) ? onLocationTap : null,
+      /* ================================================= */
+      /* PROFILE                                           */
+      /* ================================================= */
 
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 6),
-              child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Delivering to',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF7CB342),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 18,
-                        color: Color(0xFF43A047),
-                      ),
-                      const SizedBox(width: 6),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(22),
+            onTap: () async {
+              if (!isLoggedIn) {
+                await Navigator.pushNamed(
+                  context,
+                  AppRoutes.login,
+                );
+                return;
+              }
 
-                      Flexible(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(
-                              milliseconds: 250),
-                          child: isDetecting
-                              ? _locationShimmer()
-                              : Text(
-                                  hasLocation
-                                      ? LocationState
-                                          .address
-                                      : 'Select location',
-                                  key: ValueKey(
-                                      LocationState
-                                          .address),
-                                  maxLines: 1,
-                                  overflow:
-                                      TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight:
-                                        FontWeight.w700,
-                                    color:
-                                        Color(0xFF1B5E20),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons
-                            .keyboard_arrow_down_rounded,
-                        color: Color(0xFF558B2F),
-                      ),
-                    ],
+              Navigator.pushNamed(
+                context,
+                AppRoutes.profile,
+              );
+            },
+            child: Container(
+              height: 40,
+              width: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-            ),
-          ),
-
-          /* ================= PROFILE ================= */
-
-          actions: [
-            Padding(
-              padding:
-                  const EdgeInsets.only(right: 12),
-              child: InkWell(
-                borderRadius:
-                    BorderRadius.circular(22),
-                onTap: () async {
-                  if (!isLoggedIn) {
-                    final result =
-                        await Navigator.pushNamed(
-                      context,
-                      AppRoutes.login,
-                    );
-                    if (result == true)
-                      onAuthChanged();
-                    return;
-                  }
-
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.profile,
-                  );
-                },
-                child: Container(
-                  height: 40,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            Colors.black.withOpacity(0.10),
-                        blurRadius: 6,
-                        offset:
-                            const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    isLoggedIn
-                        ? Icons.account_circle
-                        : Icons.person,
-                    size: 22,
-                    color:
-                        const Color(0xFF03B602),
-                  ),
-                ),
+              child: Icon(
+                isLoggedIn
+                    ? Icons.account_circle
+                    : Icons.person,
+                size: 22,
+                color: const Color(0xFF03B602),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
+}
 
-  /* -------------------------------------------------- */
-  /* SHIMMER                                             */
-  /* -------------------------------------------------- */
+/* ===================================================== */
+/* ⭐ Separate widget → only this rebuilds                */
+/* ===================================================== */
+
+class _LocationText extends StatelessWidget {
+  const _LocationText();
+
+  @override
+  Widget build(BuildContext context) {
+    final location = context.watch<LocationController>();
+
+    final isDetecting = location.isDetecting;
+    final hasLocation = location.hasLocation;
+
+    final text = hasLocation
+        ? location.current!.shortAddress // ⭐ new model
+        : 'Select location';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Delivering to',
+          style: TextStyle(
+            fontSize: 11,
+            color: Color(0xFF7CB342),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+
+        Row(
+          children: [
+            const Icon(
+              Icons.location_on,
+              size: 18,
+              color: Color(0xFF43A047),
+            ),
+            const SizedBox(width: 6),
+
+            Expanded(
+              child: AnimatedSwitcher(
+                duration:
+                    const Duration(milliseconds: 250),
+                child: isDetecting
+                    ? _locationShimmer()
+                    : Text(
+                        text,
+                        key: ValueKey(text),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1B5E20),
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFF558B2F),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _locationShimmer() {
-    return Shimmer.fromColors(
-      baseColor: const Color(0xFFB7E1C2),
-      highlightColor: const Color(0xFFE9F9ED),
-      child: Container(
-        height: 18,
-        width: 140,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(6),
-        ),
+    return Container(
+      height: 18,
+      width: 140,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(6),
       ),
-    );
-  }
-}
-
-/* ================================================== */
-/* HEADER STATE                                       */
-/* ================================================== */
-
-class LocationHeaderState {
-  final bool isDetecting;
-
-  /// ⭐ now depends on coordinates (not just text)
-  final bool hasLocation;
-
-  const LocationHeaderState({
-    required this.isDetecting,
-    required this.hasLocation,
-  });
-}
-
-/* ================================================== */
-/* CONTROLLER                                         */
-/* ================================================== */
-
-class LocationHeaderController
-    extends ValueNotifier<LocationHeaderState> {
-  LocationHeaderController._()
-      : super(
-          LocationHeaderState(
-            isDetecting: LocationState.isDetecting,
-            hasLocation:
-                LocationState.hasCoordinates,
-          ),
-        );
-
-  static final instance =
-      LocationHeaderController._();
-
-  void sync() {
-    value = LocationHeaderState(
-      isDetecting: LocationState.isDetecting,
-      hasLocation: LocationState.hasCoordinates,
     );
   }
 }

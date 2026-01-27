@@ -1,8 +1,8 @@
 /// lib/features/auth/services/customer_auth_api.dart
 import 'package:dio/dio.dart';
 
-import '../../../network/api_endpoints.dart';
-import '../../../network/http_client.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/http_client.dart';
 import '../../../utils/api_error_handler.dart';
 import '../../../utils/app_toast.dart';
 import '../../../utils/phone_normalizer.dart';

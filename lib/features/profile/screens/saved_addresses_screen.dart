@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../utils/saved_address.dart';
-import '../../../utils/saved_address_storage.dart';
-import '../../location/screens/add_address_screen.dart';
-import '../../shell/widgets/location_tiles.dart';
+import '../../saved_address/state/saved_address_controller.dart';
+import '../../saved_address/widgets/saved_address_list.dart';
+import '../../saved_address/screens/add_edit_address_screen.dart';
 
 class SavedAddressesScreen extends StatefulWidget {
-  const SavedAddressesScreen({Key? key}) : super(key: key);
+  const SavedAddressesScreen({super.key});
 
   @override
   State<SavedAddressesScreen> createState() =>
@@ -15,80 +15,95 @@ class SavedAddressesScreen extends StatefulWidget {
 
 class _SavedAddressesScreenState
     extends State<SavedAddressesScreen> {
-  late Future<List<SavedAddress>> _future;
-
   @override
   void initState() {
     super.initState();
-    _reload();
+
+    /// load once when page opens
+    Future.microtask(
+      () =>
+          context.read<SavedAddressController>().load(),
+    );
   }
 
-  void _reload() {
-    _future = SavedAddressStorage.getAll();
+  /* ================================================= */
+  /* ADD NEW ADDRESS                                   */
+  /* ================================================= */
+
+  Future<void> _add() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AddEditAddressScreen(),
+      ),
+    );
+
+    /// refresh after returning
+    if (mounted) {
+      context.read<SavedAddressController>().refresh();
+    }
   }
+
+  /* ================================================= */
+  /* EDIT ADDRESS                                      */
+  /* ================================================= */
+
+  Future<void> _edit(address) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            AddEditAddressScreen(address: address),
+      ),
+    );
+
+    if (mounted) {
+      context.read<SavedAddressController>().refresh();
+    }
+  }
+
+  /* ================================================= */
+  /* UI                                                 */
+  /* ================================================= */
 
   @override
   Widget build(BuildContext context) {
+    final ctrl = context.watch<SavedAddressController>();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Saved addresses'),
-      ),
-      body: FutureBuilder<List<SavedAddress>>(
-        future: _future,
-        builder: (context, snapshot) {
-          final list = snapshot.data ?? [];
-
-          if (list.isEmpty) {
-            return const Center(
-              child: Text('No saved addresses yet'),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: list.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: 8),
-            itemBuilder: (_, index) {
-              final address = list[index];
-
-              return AddressTile(
-                icon: iconForType(address.type),
-                title: address.label,
-                subtitle: address.address,
-                isActive: false, // profile = no selection
-                onTap: () async {
-                  // 👉 EDIT FLOW (same screen)
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          AddAddressScreen(existing: address),
-                    ),
-                  );
-
-                  // Refresh after edit/delete
-                  setState(_reload);
-                },
-              );
-            },
-          );
-        },
+        title: const Text('Saved Addresses'),
       ),
 
-      // ➕ ADD NEW ADDRESS
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AddAddressScreen(),
-            ),
-          );
-          setState(_reload);
-        },
+      /* ================================================= */
+      /* BODY                                               */
+      /* ================================================= */
+
+      body: SafeArea(
+        child: SavedAddressList(
+          showActions: true, // enables delete menu
+
+          /// tap → edit
+          onSelect: (addr) => _edit(addr),
+        ),
       ),
+
+      /* ================================================= */
+      /* ADD BUTTON                                         */
+      /* ================================================= */
+
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _add,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Address'),
+      ),
+
+      /* ================================================= */
+      /* LOADING OVERLAY                                    */
+      /* ================================================= */
+
+      floatingActionButtonLocation:
+          FloatingActionButtonLocation.endFloat,
     );
   }
 }

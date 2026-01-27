@@ -1,5 +1,5 @@
 /// lib/network/auth_headers.dart
-import '../utils/device_info.dart';
+import '../../utils/device_info.dart';
 
 class AuthHeaders {
   /// Headers that should be sent with EVERY request

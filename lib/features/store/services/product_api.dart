@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import '../../../network/http_client.dart';
+import '../../../core/network/http_client.dart';
 import '../models/product.model.dart';
 import 'package:flutter/foundation.dart';
 

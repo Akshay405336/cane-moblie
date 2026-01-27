@@ -5,11 +5,10 @@ import '../screens/product_details.screen.dart';
 import '../../home/theme/home_colors.dart';
 import '../../home/theme/home_spacing.dart';
 import '../../home/theme/home_text_styles.dart';
+import '../widgets/product_add_button.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
-
-  /// ⭐ outlet scoped
   final String outletId;
 
   const ProductCard({
@@ -23,6 +22,8 @@ class ProductCard extends StatelessWidget {
     return InkWell(
       borderRadius:
           BorderRadius.circular(HomeSpacing.radiusLg),
+
+      /// ⭐ open details only when card tapped
       onTap: () {
         Navigator.push(
           context,
@@ -34,6 +35,7 @@ class ProductCard extends StatelessWidget {
           ),
         );
       },
+
       child: Container(
         decoration: BoxDecoration(
           color: HomeColors.pureWhite,
@@ -50,9 +52,10 @@ class ProductCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            /* ================= IMAGE STACK ================= */
+            /* ================================================= */
+            /* IMAGE STACK                                       */
+            /* ================================================= */
 
             Stack(
               children: [
@@ -60,36 +63,15 @@ class ProductCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.all(HomeSpacing.sm),
                   child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(
-                            HomeSpacing.radiusMd),
+                    borderRadius: BorderRadius.circular(
+                        HomeSpacing.radiusMd),
                     child: SizedBox(
                       height: 120,
                       width: double.infinity,
-                      child: Image.network(
-                        product.mainImageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder:
-                            (context, child, progress) {
-                          if (progress == null)
-                            return child;
-                          return const Center(
-                            child:
-                                CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: HomeColors.primaryGreen,
-                            ),
-                          );
-                        },
-                        errorBuilder:
-                            (_, __, ___) => const Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            size: 28,
-                            color:
-                                HomeColors.textLightGrey,
-                          ),
-                        ),
+
+                      /// ⭐ SAFE IMAGE
+                      child: _SafeNetworkImage(
+                        url: product.mainImageUrl,
                       ),
                     ),
                   ),
@@ -98,21 +80,10 @@ class ProductCard extends StatelessWidget {
                 /* TRENDING BADGE */
 
                 if (product.isTrending)
-                  Positioned(
+                  const Positioned(
                     top: 14,
                     left: 14,
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.local_fire_department,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _TrendingBadge(),
                   ),
 
                 /* ADD BUTTON */
@@ -120,46 +91,36 @@ class ProductCard extends StatelessWidget {
                 Positioned(
                   bottom: 14,
                   right: 14,
-                  child: Container(
-                    height: 28,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: HomeColors.pureWhite,
-                      borderRadius:
-                          BorderRadius.circular(6),
-                      border: Border.all(
-                        color: HomeColors.primaryGreen,
-                        width: 1.2,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '+ ADD',
-                      style: TextStyle(
-                        color: HomeColors.primaryGreen,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
+
+                  /// ⭐ prevents parent InkWell tap automatically
+                  child: Material(
+                    color: Colors.transparent,
+                    child: ProductAddButton(
+                      product: product,
+                      outletId: outletId,
                     ),
                   ),
                 ),
               ],
             ),
 
-            /* ================= DETAILS ================= */
+            /* ================================================= */
+            /* DETAILS                                           */
+            /* ================================================= */
 
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 HomeSpacing.sm,
                 0,
                 HomeSpacing.sm,
-                0,
+                HomeSpacing.sm,
               ),
               child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
+                  /* PRICE */
+
                   Row(
                     children: [
                       _GreenPricePill(
@@ -179,6 +140,8 @@ class ProductCard extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
+                  /* DISCOUNT */
+
                   if (product.hasDiscount)
                     Row(
                       children: [
@@ -197,6 +160,8 @@ class ProductCard extends StatelessWidget {
 
                   const SizedBox(height: 4),
 
+                  /* NAME */
+
                   Text(
                     product.name,
                     maxLines: 2,
@@ -204,13 +169,76 @@ class ProductCard extends StatelessWidget {
                     style: HomeTextStyles.productName
                         .copyWith(height: 1.25),
                   ),
-
-                  const SizedBox(height: 2),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/* ================================================= */
+/* SAFE NETWORK IMAGE ⭐                              */
+/* ================================================= */
+
+class _SafeNetworkImage extends StatelessWidget {
+  final String url;
+
+  const _SafeNetworkImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) {
+      return const Icon(Icons.image_not_supported);
+    }
+
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      loadingBuilder: (_, child, progress) {
+        if (progress == null) return child;
+
+        return const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: HomeColors.primaryGreen,
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) {
+        return const Center(
+          child: Icon(
+            Icons.broken_image,
+            size: 28,
+            color: HomeColors.textLightGrey,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/* ================================================= */
+/* TRENDING BADGE                                    */
+/* ================================================= */
+
+class _TrendingBadge extends StatelessWidget {
+  const _TrendingBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: const BoxDecoration(
+        color: Colors.red,
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.local_fire_department,
+        size: 14,
+        color: Colors.white,
       ),
     );
   }
@@ -258,7 +286,7 @@ class _DottedLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
+      builder: (_, constraints) {
         final dashCount =
             (constraints.maxWidth / 6).floor();
 
@@ -268,8 +296,8 @@ class _DottedLine extends StatelessWidget {
             (_) => Expanded(
               child: Container(
                 height: 1,
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 1),
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 1),
                 color: HomeColors.primaryGreen
                     .withOpacity(0.4),
               ),

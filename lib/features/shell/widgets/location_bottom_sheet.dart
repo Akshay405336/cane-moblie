@@ -1,168 +1,192 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../utils/auth_state.dart';
-import '../../../utils/location_helper.dart';
-import '../../../utils/location_state.dart';
-import '../../../utils/saved_address.dart';
-import '../../../utils/saved_address_storage.dart';
-import '../../location/screens/add_address_screen.dart';
-import 'saved_address_list.dart';
+import '../../location/state/location_controller.dart';
+import '../../location/services/location_service.dart';
+import '../../saved_address/state/saved_address_controller.dart';
+import '../../saved_address/screens/add_edit_address_screen.dart';
+
 import 'location_tiles.dart';
+import '../../saved_address/widgets/saved_address_list.dart';
 
 class LocationBottomSheet extends StatefulWidget {
-  final Future<void> Function() onUseCurrentLocation;
-
-  final void Function({
-    required String id,
-    required String address,
-    double? lat,
-    double? lng,
-  }) onSelectSavedAddress;
-
-  const LocationBottomSheet({
-    Key? key,
-    required this.onUseCurrentLocation,
-    required this.onSelectSavedAddress,
-  }) : super(key: key);
+  const LocationBottomSheet({super.key});
 
   @override
-  State<LocationBottomSheet> createState() =>
-      _LocationBottomSheetState();
+  State<LocationBottomSheet> createState() => _LocationBottomSheetState();
 }
 
 class _LocationBottomSheetState extends State<LocationBottomSheet>
     with WidgetsBindingObserver {
-  late Future<List<SavedAddress>> _future;
-
-  // ⭐ ONLY service state (not permission)
   bool _gpsEnabled = true;
+
+  /* ================================================= */
+  /* INIT                                              */
+  /* ================================================= */
 
   @override
   void initState() {
     super.initState();
+
+    debugPrint('📍 BottomSheet initState');
+
     WidgetsBinding.instance.addObserver(this);
-    _load();
+
+    _checkGps();
   }
 
   @override
   void dispose() {
+    debugPrint('📍 BottomSheet dispose');
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   /* ================================================= */
-  /* LOAD DATA                                         */
+  /* GPS CHECK                                         */
   /* ================================================= */
 
-  Future<void> _load() async {
-    _future = SavedAddressStorage.getAll();
+  Future<void> _checkGps() async {
+    debugPrint('🔍 Checking GPS...');
 
-    // ⭐ ONLY check GPS service
-    _gpsEnabled = await LocationHelper.isGpsEnabled();
+    final enabled = await LocationService.isGpsEnabled();
 
-    if (mounted) setState(() {});
+    debugPrint('📡 GPS enabled = $enabled');
+
+    if (!mounted) return;
+
+    setState(() => _gpsEnabled = enabled);
   }
 
   /* ================================================= */
-  /* RESUME FROM SETTINGS                              */
+  /* RETURN FROM SETTINGS                              */
   /* ================================================= */
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) async {
-    if (state != AppLifecycleState.resumed) return;
+@override
+void didChangeAppLifecycleState(AppLifecycleState state) async {
+  if (state != AppLifecycleState.resumed) return;
 
-    final enabled = await LocationHelper.isGpsEnabled();
+  debugPrint('🔁 App resumed → rechecking GPS');
 
-    if (mounted) {
-      setState(() {
-        _gpsEnabled = enabled;
-      });
-    }
+  await Future.delayed(const Duration(milliseconds: 400));
+  await _checkGps();
 
-    // close sheet automatically if turned ON
-    if (enabled && mounted) {
-      Navigator.pop(context);
-    }
+  /// ⭐ JUST CLOSE SHEET (NO DETECT HERE)
+  if (_gpsEnabled && mounted && Navigator.canPop(context)) {
+    debugPrint('✅ GPS ON → closing sheet immediately');
+    Navigator.pop(context);
   }
+}
+
 
   /* ================================================= */
-  /* UI                                                */
+  /* BUILD                                             */
   /* ================================================= */
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
+    final location = context.watch<LocationController>();
+    final savedCtrl = context.watch<SavedAddressController>();
 
-    return Container(
-      height: height * 0.6,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const BottomSheetHandle(),
-          const SizedBox(height: 24),
+    debugPrint(
+      '🟢 Sheet rebuild → gps=$_gpsEnabled | hasLocation=${location.hasLocation} | detecting=${location.isDetecting}',
+    );
 
-          /// 🔄 Detecting
-          if (LocationState.isDetecting)
-            const LocationFetchingTile()
+    /* ================================================= */
+    /* AUTO CLOSE WHEN LOCATION AVAILABLE                */
+    /* ================================================= */
 
-          else ...[
-            /// 🔴 GPS OFF
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      if (location.hasLocation && Navigator.canPop(context)) {
+        debugPrint('✅ Location ready → closing sheet');
+        Navigator.pop(context);
+      }
+    });
+
+    return SafeArea(
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const BottomSheetHandle(),
+            const SizedBox(height: 20),
+
+            /* ================================================= */
+            /* ⭐ GPS OFF → ENABLE BUTTON                          */
+            /* ================================================= */
             if (!_gpsEnabled)
               LocationPermissionOffTile(
-                onEnable: widget.onUseCurrentLocation,
-              ),
+                onEnablePressed: () async {
+                  debugPrint('🚀 Enable tapped');
 
-            /// 🟢 GPS ON
-            if (_gpsEnabled)
+                  /// ⭐ ask permission FIRST
+                  final granted = await LocationService.requestPermission();
+
+                  if (!granted) {
+                    debugPrint('❌ Permission denied');
+                    return;
+                  }
+
+                  /// ⭐ open device GPS settings
+                  await LocationService.openSettings();
+                },
+              )
+            else if (location.isDetecting)
+              const LocationFetchingTile()
+            else ...[
               CurrentLocationTile(
                 isDetecting: false,
-                onTap: widget.onUseCurrentLocation,
-              ),
-
-            /// SAVED ADDRESSES
-            if (AuthState.isAuthenticated) ...[
-              const SizedBox(height: 24),
-              const SectionTitle(text: 'Saved addresses'),
-              const SizedBox(height: 12),
-
-              SavedAddressList(
-                future: _future,
-                onSelect: (addr) {
-                  widget.onSelectSavedAddress(
-                    id: addr.id,
-                    address: addr.address,
-                    lat: addr.lat,
-                    lng: addr.lng,
-                  );
+                onTap: () {
+                  debugPrint('📍 Detect tapped');
+                  location.detectCurrentLocation();
                 },
               ),
+
+              if (savedCtrl.isLoggedIn) ...[
+                const SizedBox(height: 26),
+                const SectionTitle(text: 'Saved addresses'),
+                const SizedBox(height: 12),
+
+                SavedAddressList(
+                  activeSavedId: location.current?.savedAddressId,
+                  onSelect: (addr) {
+                    debugPrint('🏠 Saved selected → ${addr.address}');
+                    location.setSaved(addr.toLocationData());
+                  },
+                ),
+              ],
             ],
 
             const Spacer(),
-            const Divider(height: 1),
+            const Divider(),
             const SizedBox(height: 12),
 
-            /// SEARCH MANUALLY
+            /* ================================================= */
+            /* MANUAL SEARCH                                      */
+            /* ================================================= */
             InkWell(
               onTap: () async {
+                debugPrint('🔎 Manual search tapped');
+
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        const AddAddressScreen(),
+                    builder: (_) => const AddEditAddressScreen(),
                   ),
                 );
 
-                _load();
+                savedCtrl.refresh();
               },
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.search, color: Color(0xFF03B602)),
                   SizedBox(width: 8),
                   Text(
@@ -176,7 +200,7 @@ class _LocationBottomSheetState extends State<LocationBottomSheet>
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

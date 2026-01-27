@@ -3,31 +3,54 @@ import 'package:flutter/material.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/otp_screen.dart';
+
 import 'features/shell/app_layout.dart';
 
-// 🧑 PROFILE
+/* ================= PROFILE ================= */
+
 import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/saved_addresses_screen.dart';
 
+/* ================= SAVED ADDRESS ================= */
+
+import 'features/saved_address/screens/add_edit_address_screen.dart';
+
+/* ================= CHECKOUT ================= */
+
+import 'features/checkout/screens/checkout_screen.dart';
+
+/* ================= ORDERS ================= */
+
+import 'features/orders/screens/order_details_screen.dart';
+
 class AppRoutes {
   /* ================================================= */
-  /* ROUTE NAMES                                      */
+  /* ROUTE NAMES                                       */
   /* ================================================= */
 
-  static const String splash = '/';
-  static const String login = '/login';
-  static const String otp = '/otp';
-  static const String home = '/home';
+  static const splash = '/';
+  static const login = '/login';
+  static const otp = '/otp';
+  static const home = '/home';
 
   // 👤 PROFILE
-  static const String profile = '/profile';
-  static const String savedAddresses = '/saved-addresses';
+  static const profile = '/profile';
+  static const savedAddresses = '/saved-addresses';
+
+  // 📍 ADDRESS
+  static const addAddress = '/add-address';
+
+  // 🛒 CHECKOUT
+  static const checkout = '/checkout';
+
+  // 📦 ORDERS
+  static const orderDetails = '/order-details';
 
   /* ================================================= */
-  /* ROUTE MAP                                        */
+  /* ROUTES                                            */
   /* ================================================= */
 
-  static Map<String, WidgetBuilder> routes = {
+  static final Map<String, WidgetBuilder> routes = {
     splash: (_) => const SplashScreen(),
     login: (_) => const LoginScreen(),
     otp: (_) => const OtpScreen(),
@@ -38,5 +61,14 @@ class AppRoutes {
     // 👤 PROFILE
     profile: (_) => const ProfileScreen(),
     savedAddresses: (_) => const SavedAddressesScreen(),
+
+    // 📍 ADDRESS
+    addAddress: (_) => const AddEditAddressScreen(),
+
+    // 🛒 CHECKOUT
+    checkout: (_) => const CheckoutScreen(),
+
+    // 📦 ORDERS
+    orderDetails: (_) => const OrderDetailsScreen(),
   };
 }

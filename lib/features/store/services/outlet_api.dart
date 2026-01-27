@@ -1,13 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../../network/http_client.dart';
-import '../../../utils/location_state.dart';
+import '../../../core/network/http_client.dart';
 import '../models/product.model.dart';
 import '../models/outlet.model.dart';
 
 class OutletApi {
   OutletApi._();
+
+  static final Dio _dio = AppHttpClient.dio;
 
   /* ================================================= */
   /* GET NEARBY OUTLETS                                */
@@ -18,12 +19,9 @@ class OutletApi {
     required double lng,
   }) async {
     try {
-      debugPrint(
-        '🚚 REST → Fetch outlets with lat=$lat, lng=$lng',
-      );
+      debugPrint('🚚 GET /public/outlets?lat=$lat&lng=$lng');
 
-      final Response response =
-          await AppHttpClient.dio.get(
+      final response = await _dio.get(
         '/public/outlets',
         queryParameters: {
           'lat': lat,
@@ -31,23 +29,19 @@ class OutletApi {
         },
       );
 
-      final List data = response.data['data'] ?? [];
+      final list =
+          (response.data['data'] as List?) ?? const [];
 
-      final outlets = data
+      return list
           .map(
             (e) => Outlet.fromJson(
               Map<String, dynamic>.from(e),
             ),
           )
           .toList();
-
-      debugPrint(
-        '📦 REST → Outlets received: ${outlets.length}',
-      );
-
-      return outlets;
-    } catch (e) {
-      debugPrint('❌ OutletApi.getNearby error => $e');
+    } catch (e, s) {
+      debugPrint('❌ OutletApi.getNearby → $e');
+      debugPrintStack(stackTrace: s);
       return [];
     }
   }
@@ -61,32 +55,25 @@ class OutletApi {
   ) async {
     try {
       debugPrint(
-        '🛒 REST → Fetch products for outlet=$outletId',
-      );
+          '🛒 GET /public/outlets/$outletId/products');
 
-      final Response response =
-          await AppHttpClient.dio.get(
-        '/public/outlets/$outletId/products',
-      );
+      final response =
+          await _dio.get('/public/outlets/$outletId/products');
 
-      final List data = response.data['data'] ?? [];
+      final list =
+          (response.data['data'] as List?) ?? const [];
 
-      final products = data
+      return list
           .map(
             (e) => Product.fromJson(
               Map<String, dynamic>.from(e),
             ),
           )
           .toList();
-
+    } catch (e, s) {
       debugPrint(
-        '📦 Products received: ${products.length}',
-      );
-
-      return products;
-    } catch (e) {
-      debugPrint(
-          '❌ OutletApi.getOutletProducts error => $e');
+          '❌ OutletApi.getOutletProducts → $e');
+      debugPrintStack(stackTrace: s);
       return [];
     }
   }

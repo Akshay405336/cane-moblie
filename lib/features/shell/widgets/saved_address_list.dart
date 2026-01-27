@@ -1,90 +1,100 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../utils/auth_state.dart';
-import '../../../utils/location_state.dart';
-import '../../../utils/saved_address.dart';
-import 'location_tiles.dart';
+import '../../saved_address/state/saved_address_controller.dart';
+import '../../saved_address/models/saved_address.model.dart';
+
+import '../../shell/widgets/location_tiles.dart';
 
 class SavedAddressList extends StatelessWidget {
-  final Future<List<SavedAddress>> future;
-
-  /// ⭐ CLEANER → pass whole model
   final void Function(SavedAddress address) onSelect;
 
+  /// parent controls which is active
+  final String? activeSavedId;
+
   const SavedAddressList({
-    Key? key,
-    required this.future,
+    super.key,
     required this.onSelect,
-  }) : super(key: key);
+    this.activeSavedId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // 🔐 not logged in
-    if (!AuthState.isAuthenticated) {
-      return const SizedBox.shrink();
-    }
+    return Selector<SavedAddressController, _SavedViewState>(
+      selector: (_, c) => _SavedViewState(
+        isLoggedIn: c.isLoggedIn,
+        isLoading: c.isLoading,
+        addresses: c.addresses,
+      ),
+      builder: (_, state, __) {
+        /* ================================================= */
+        /* NOT LOGGED IN                                     */
+        /* ================================================= */
 
-    return FutureBuilder<List<SavedAddress>>(
-      future: future,
-      builder: (context, snapshot) {
-        // loading
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (!state.isLoggedIn) {
+          return const SizedBox.shrink();
+        }
+
+        /* ================================================= */
+        /* LOADING                                           */
+        /* ================================================= */
+
+        if (state.isLoading) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        }
-
-        // error
-        if (snapshot.hasError) {
-          return const Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: Text(
-              'Unable to load saved addresses',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey,
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
           );
         }
 
-        final list = snapshot.data ?? [];
+        /* ================================================= */
+        /* EMPTY                                             */
+        /* ================================================= */
 
-        // empty
-        if (list.isEmpty) {
+        if (state.addresses.isEmpty) {
           return const EmptySavedAddress();
         }
 
-        // list
-        return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: list.length,
-          separatorBuilder: (_, __) =>
+        /* ================================================= */
+        /* LIST (Column > ListView for bottom sheet perf)     */
+        /* ================================================= */
+
+        return Column(
+          children: [
+            for (final address in state.addresses) ...[
+              AddressTile(
+                icon: iconForType(address.type),
+                title: address.label,
+                subtitle: address.address,
+                isActive: activeSavedId == address.id,
+                onTap: () => onSelect(address),
+              ),
               const SizedBox(height: 8),
-          itemBuilder: (_, index) {
-            final address = list[index];
-
-            final isActive =
-                LocationState.isSavedAddress &&
-                    LocationState.activeSavedAddressId ==
-                        address.id;
-
-            return AddressTile(
-              icon: iconForType(address.type),
-              title: address.label,
-              subtitle: address.address,
-              isActive: isActive,
-
-              /// ⭐ MUCH CLEANER
-              onTap: () => onSelect(address),
-            );
-          },
+            ],
+          ],
         );
       },
     );
   }
+}
+
+/* ===================================================== */
+/* SMALL OPTIMIZED VIEW MODEL (reduces rebuild noise)     */
+/* ===================================================== */
+
+class _SavedViewState {
+  final bool isLoggedIn;
+  final bool isLoading;
+  final List<SavedAddress> addresses;
+
+  _SavedViewState({
+    required this.isLoggedIn,
+    required this.isLoading,
+    required this.addresses,
+  });
 }
