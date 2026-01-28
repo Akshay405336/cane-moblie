@@ -6,7 +6,6 @@ import 'routes.dart';
 import './features/home/services/category_socket_service.dart';
 import './utils/app_lifecycle_handler.dart';
 
-/// ⭐ ADD THESE
 import './features/location/state/location_controller.dart';
 import './features/saved_address/state/saved_address_controller.dart';
 
@@ -14,9 +13,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
   /// 🔄 Lifecycle observer
-  WidgetsBinding.instance.addObserver(
-    AppLifecycleHandler(),
-  );
+  WidgetsBinding.instance.addObserver(AppLifecycleHandler());
 
   /// ✅ Only categories warmup globally
   CategorySocketService.connect();
@@ -24,12 +21,24 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        /// ⭐ REQUIRED (THIS WAS MISSING)
-        ChangeNotifierProvider(
+        /* ================================================= */
+        /* LOCATION CONTROLLER                               */
+        /* ================================================= */
+
+        ChangeNotifierProvider<LocationController>(
           create: (_) => LocationController(),
         ),
-        ChangeNotifierProvider(
-          create: (_) => SavedAddressController(),
+
+        /* ================================================= */
+        /* SAVED ADDRESS CONTROLLER ⭐ FINAL CORRECT VERSION  */
+        /* ================================================= */
+        /// ⭐ PROPER DEPENDENCY INJECTION (NO setter)
+        ChangeNotifierProxyProvider<LocationController, SavedAddressController>(
+          create: (context) =>
+              SavedAddressController(context.read<LocationController>()),
+
+          update: (context, location, previous) =>
+              previous ?? SavedAddressController(location),
         ),
       ],
       child: const CaneAndTenderApp(),

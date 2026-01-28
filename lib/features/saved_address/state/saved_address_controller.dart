@@ -3,8 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../utils/auth_state.dart';
 import '../models/saved_address.model.dart';
 import '../services/saved_address_repository.dart';
+import '../../location/state/location_controller.dart';
 
 class SavedAddressController extends ChangeNotifier {
+
+  /* ================================================= */
+  /* ⭐ LOCATION DEPENDENCY (INJECTED FROM PROVIDER)    */
+  /* ================================================= */
+
+  LocationController? _locationCtrl;
+
+  SavedAddressController([this._locationCtrl]);
+
+  /// ⭐ REQUIRED for ProxyProvider
+  void setLocationController(LocationController ctrl) {
+    _locationCtrl = ctrl;
+  }
+
   /* ================================================= */
   /* STATE                                             */
   /* ================================================= */
@@ -40,11 +55,13 @@ class SavedAddressController extends ChangeNotifier {
     debugPrint('👉 forceRefresh = $forceRefresh');
     debugPrint('==============================');
 
-    /// ⭐ if guest skip API completely
+    /// ⭐ guest → clear instantly
     if (!isLoggedIn) {
       debugPrint('⛔ Guest → clearing addresses');
+
       _addresses = [];
       _error = null;
+
       notifyListeners();
       return;
     }
@@ -67,6 +84,7 @@ class SavedAddressController extends ChangeNotifier {
     } catch (e, s) {
       debugPrint('❌ LOAD ERROR → $e');
       debugPrint('$s');
+
       _error = 'Failed to load saved addresses';
     } finally {
       _stopLoading();
@@ -90,8 +108,7 @@ class SavedAddressController extends ChangeNotifier {
     _startLoading();
 
     try {
-      final created =
-          await SavedAddressRepository.create(address);
+      final created = await SavedAddressRepository.create(address);
 
       _addresses = [..._addresses, created];
 
@@ -105,21 +122,41 @@ class SavedAddressController extends ChangeNotifier {
   }
 
   /* ================================================= */
-  /* UPDATE                                            */
+  /* UPDATE ⭐ HEADER SYNC FIX                          */
   /* ================================================= */
 
   Future<void> update(SavedAddress address) async {
     _startLoading();
 
     try {
-      final updated =
-          await SavedAddressRepository.update(address);
+      final updated = await SavedAddressRepository.update(address);
+
+      /* ---------------- update list ---------------- */
 
       _addresses = _addresses
           .map((e) => e.id == updated.id ? updated : e)
           .toList();
 
       debugPrint('✅ Updated → ${updated.id}');
+
+      /* ================================================= */
+      /* ⭐ THIS IS THE IMPORTANT PART                      */
+      /* If currently selected address was edited → update  */
+      /* header location + outlet socket automatically      */
+      /* ================================================= */
+
+      final current = _locationCtrl?.current;
+
+      if (current != null &&
+          current.savedAddressId == updated.id) {
+
+        debugPrint('🔄 Syncing updated address to header');
+
+        await _locationCtrl?.setSaved(
+          updated.toLocationData(),
+        );
+      }
+
     } catch (e) {
       debugPrint('❌ Update error → $e');
       _error = 'Unable to update address';

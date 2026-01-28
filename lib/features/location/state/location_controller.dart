@@ -36,16 +36,19 @@ class LocationController extends ChangeNotifier {
   Future<void> load() async {
     debugPrint('📦 Controller → load cache');
 
-    /// ⭐ CRITICAL FIX
-    /// If GPS OFF → DO NOT USE CACHE
     final gpsEnabled =
         await Geolocator.isLocationServiceEnabled();
 
+    /// ⭐ FIX: MUST notify when clearing
     if (!gpsEnabled) {
       debugPrint('⚠️ GPS OFF → clearing cached location');
 
       await SecureStorage.delete(_cacheKey);
+
       _current = null;
+
+      notifyListeners(); // ⭐ IMPORTANT FIX
+
       return;
     }
 
@@ -64,7 +67,7 @@ class LocationController extends ChangeNotifier {
   }
 
   /* ================================================= */
-  /* ⭐ MAIN DETECT METHOD                              */
+  /* DETECT CURRENT LOCATION                           */
   /* ================================================= */
 
   Future<void> detectCurrentLocation() async {
@@ -80,60 +83,40 @@ class LocationController extends ChangeNotifier {
     _locationUpdated();
 
     try {
-      /* ------------------------------------------------- */
-      /* 1️⃣ PERMISSION FIRST                              */
-      /* ------------------------------------------------- */
-
       final hasPermission =
           await LocationService.requestPermission();
 
       if (!hasPermission) {
-        debugPrint('❌ Permission denied');
         _error = 'Location permission required';
         return;
       }
-
-      /* ------------------------------------------------- */
-      /* 2️⃣ SERVICE ENABLED                                */
-      /* ------------------------------------------------- */
 
       var gpsEnabled =
           await LocationService.isGpsEnabled();
 
       if (!gpsEnabled) {
-        debugPrint('⚠️ Opening device location settings');
-
         await LocationService.openSettings();
 
-        /// wait until user returns
-        await Future.delayed(const Duration(milliseconds: 700));
+        await Future.delayed(
+          const Duration(milliseconds: 700),
+        );
 
         gpsEnabled =
             await LocationService.isGpsEnabled();
 
         if (!gpsEnabled) {
-          debugPrint('❌ GPS still OFF');
           _error = 'Turn on location services';
           return;
         }
       }
 
-      /* ------------------------------------------------- */
-      /* 3️⃣ FETCH                                         */
-      /* ------------------------------------------------- */
-
       final result =
           await LocationService.fetchCurrentLocation();
 
       if (result == null) {
-        debugPrint('❌ Fetch failed');
         _error = 'Unable to detect location';
         return;
       }
-
-      /* ------------------------------------------------- */
-      /* 4️⃣ SAVE                                          */
-      /* ------------------------------------------------- */
 
       _current = result;
 
@@ -165,6 +148,7 @@ class LocationController extends ChangeNotifier {
     _current = result;
 
     await _persist();
+
     _locationUpdated();
   }
 
@@ -180,7 +164,8 @@ class LocationController extends ChangeNotifier {
     );
 
     await _persist();
-    _locationUpdated();
+
+    _locationUpdated(); // ⭐ triggers header + home refresh
   }
 
   /* ================================================= */
@@ -212,9 +197,12 @@ class LocationController extends ChangeNotifier {
     debugPrint('💾 Location persisted');
   }
 
-  void _locationUpdated() {
-  debugPrint('📡 Location updated → notify UI');
+  /* ================================================= */
+  /* INTERNAL                                          */
+  /* ================================================= */
 
-  notifyListeners();
-}
+  void _locationUpdated() {
+    debugPrint('📡 Location updated → notify UI');
+    notifyListeners();
+  }
 }
