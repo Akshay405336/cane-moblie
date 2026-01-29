@@ -8,7 +8,7 @@ class Env {
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://inapt-preceremonial-nicky.ngrok-free.dev';
+      : 'https://progressively-proinsurance-nicole.ngrok-free.dev';
 
   /// App name
   static const String appName = 'Cane & Tender';

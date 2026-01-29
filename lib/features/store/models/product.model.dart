@@ -7,12 +7,9 @@ import '../../cart/models/cart_item.model.dart';
 
 class Product {
   final String id;
-
   final Category category;
-
   final String name;
   final String slug;
-
   final double originalPrice;
   final double? discountPrice;
 
@@ -47,16 +44,32 @@ class Product {
   });
 
   /* ================================================= */
-  /* SAFE HELPERS                                      */
+  /* SAFE HELPERS (🔥 FIXED)                           */
   /* ================================================= */
 
+  /// Safely converts String/Int/Double to Double
   static double _toDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString()) ?? 0.0;
+  }
+
+  /// Safely converts String/Int to Int
+  static int _toInt(dynamic v) {
     if (v == null) return 0;
-    return (v as num).toDouble();
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
+  }
+  
+  /// Safely converts String/Num to Num (useful for generic numbers)
+  static num _toNum(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
   }
 
   /* ================================================= */
-  /* JSON → PRODUCT (🔥 FIXED)                         */
+  /* JSON → PRODUCT                                    */
   /* ================================================= */
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -68,24 +81,20 @@ class Product {
       name: json['productName'] ?? json['name'] ?? '',
       slug: json['slug'] ?? '',
 
-      /// 🔥 FIX: use backend fields
-      originalPrice: _toDouble(
-        json['originalPrice'] ?? json['price'],
-      ),
+      /// 🔥 FIX: Safe double parsing
+      originalPrice: _toDouble(json['originalPrice'] ?? json['price']),
 
       discountPrice: json['discountPrice'] != null
           ? _toDouble(json['discountPrice'])
           : null,
 
-      /// 🔥 FIX: correct key
-      mainImage:
-          json['mainImage'] ?? json['image'] ?? '',
+      mainImage: json['mainImage'] ?? json['image'] ?? '',
 
-      galleryImages:
-          List<String>.from(json['galleryImages'] ?? []),
+      galleryImages: List<String>.from(json['galleryImages'] ?? []),
 
+      /// 🔥 FIX: Safe number parsing for unit value
       unit: ProductUnit(
-        value: json['unitValue'] ?? 0,
+        value: _toNum(json['unitValue']), 
         type: json['unitType'] ?? '',
       ),
 
@@ -93,7 +102,7 @@ class Product {
 
       rating: ProductRating(
         average: _toDouble(json['ratingAverage']),
-        count: json['ratingCount'] ?? 0,
+        count: _toInt(json['ratingCount']), // Safe int parsing
       ),
 
       shortDescription: json['shortDescription'],
@@ -109,13 +118,10 @@ class Product {
 
   String _buildUrl(String path) {
     if (path.isEmpty) return '';
-
     if (path.startsWith('http')) return path;
 
-    final base =
-        Env.baseUrl.replaceAll(RegExp(r'/$'), '');
-    final clean =
-        path.replaceAll(RegExp(r'^/'), '');
+    final base = Env.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final clean = path.replaceAll(RegExp(r'^/'), '');
 
     return '$base/$clean';
   }
@@ -133,48 +139,36 @@ class Product {
   /* UI HELPERS                                        */
   /* ================================================= */
 
-  double get displayPrice =>
-      discountPrice ?? originalPrice;
+  double get displayPrice => discountPrice ?? originalPrice;
 
   bool get hasDiscount =>
-      discountPrice != null &&
-      discountPrice! < originalPrice;
+      discountPrice != null && discountPrice! < originalPrice;
 
   int get discountPercent {
     if (!hasDiscount) return 0;
-
-    return (((originalPrice - discountPrice!) /
-                originalPrice) *
-            100)
-        .round();
+    return (((originalPrice - discountPrice!) / originalPrice) * 100).round();
   }
 
   /* ================================================= */
-/* CART HELPERS (🔥 add this block)                   */
-/* ================================================= */
+  /* CART HELPERS                                      */
+  /* ================================================= */
 
-/// unified image for cart/UI
-String get image => mainImageUrl;
+  String get image => mainImageUrl;
+  double get price => originalPrice;
+  double? get discount => discountPrice;
 
-/// original price for cart math
-double get price => originalPrice;
-
-/// discount price if exists
-double? get discount => discountPrice;
-
-/// 🔥 direct converter (super clean)
-CartItem toCartItem({int quantity = 1}) {
-  return CartItem(
-    id: id, // CartItem now requires id
-    productId: id,
-    name: name,
-    image: image,
-    quantity: quantity,
-    unitPrice: price,
-    discountPrice: discount,
-    lineTotal: null,
-  );
-}
+  CartItem toCartItem({int quantity = 1}) {
+    return CartItem(
+      id: id,
+      productId: id,
+      name: name,
+      image: image,
+      quantity: quantity,
+      unitPrice: price,
+      discountPrice: discount,
+      lineTotal: null,
+    );
+  }
 
   /* ================================================= */
   /* COPY WITH                                         */
@@ -201,20 +195,15 @@ CartItem toCartItem({int quantity = 1}) {
       category: category ?? this.category,
       name: name ?? this.name,
       slug: slug ?? this.slug,
-      originalPrice:
-          originalPrice ?? this.originalPrice,
-      discountPrice:
-          discountPrice ?? this.discountPrice,
+      originalPrice: originalPrice ?? this.originalPrice,
+      discountPrice: discountPrice ?? this.discountPrice,
       mainImage: mainImage ?? this.mainImage,
-      galleryImages:
-          galleryImages ?? this.galleryImages,
+      galleryImages: galleryImages ?? this.galleryImages,
       unit: unit ?? this.unit,
       tags: tags ?? this.tags,
       rating: rating ?? this.rating,
-      shortDescription:
-          shortDescription ?? this.shortDescription,
-      longDescription:
-          longDescription ?? this.longDescription,
+      shortDescription: shortDescription ?? this.shortDescription,
+      longDescription: longDescription ?? this.longDescription,
       isTrending: isTrending ?? this.isTrending,
     );
   }
