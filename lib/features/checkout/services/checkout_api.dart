@@ -1,0 +1,82 @@
+import 'package:flutter/foundation.dart';
+import '../../../core/network/http_client.dart';
+import '../models/checkout_summary.model.dart';
+import '../../orders/models/order.model.dart'; // Ensure you have this model
+
+class CheckoutApi {
+  CheckoutApi._();
+
+  static final _dio = AppHttpClient.dio;
+
+  /* ================================================= */
+  /* GET SUMMARY                                       */
+  /* ================================================= */
+
+  static Future<CheckoutSummary?> getSummary(String addressId) async {
+    try {
+      debugPrint('💳 GET /checkout/summary/$addressId');
+      
+      final res = await _dio.get('/checkout/summary/$addressId');
+      
+      if (res.data != null && res.data['success'] == true) {
+        return CheckoutSummary.fromJson(res.data['data']);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Checkout Summary Failed: $e');
+      rethrow; // Pass error to controller
+    }
+  }
+
+  /* ================================================= */
+  /* START CHECKOUT                                    */
+  /* ================================================= */
+
+  static Future<Map<String, String>> startCheckout(String addressId) async {
+    try {
+      debugPrint('💳 POST /checkout/start');
+
+      final res = await _dio.post(
+        '/checkout/start',
+        data: {'savedAddressId': addressId},
+      );
+
+      final data = res.data['data'];
+      return {
+        'orderId': data['orderId'],
+        'paymentId': data['paymentId'],
+      };
+    } catch (e) {
+      debugPrint('❌ Start Checkout Failed: $e');
+      throw Exception('Could not initiate checkout');
+    }
+  }
+
+  /* ================================================= */
+  /* CONFIRM PAYMENT (Mock)                            */
+  /* ================================================= */
+
+  static Future<void> confirmPayment(String paymentId) async {
+    try {
+      debugPrint('💳 POST /payments/$paymentId/confirm');
+      await _dio.post('/payments/$paymentId/confirm');
+    } catch (e) {
+      debugPrint('❌ Payment Failed: $e');
+      throw Exception('Payment verification failed');
+    }
+  }
+
+  /* ================================================= */
+  /* GET ORDER                                         */
+  /* ================================================= */
+
+  static Future<Order> getOrder(String orderId) async {
+    try {
+      final res = await _dio.get('/orders/$orderId');
+      return Order.fromJson(res.data['data']);
+    } catch (e) {
+      debugPrint('❌ Get Order Failed: $e');
+      throw Exception('Could not fetch order details');
+    }
+  }
+}
