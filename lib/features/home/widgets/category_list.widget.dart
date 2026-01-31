@@ -22,8 +22,8 @@ class CategoryListWidget extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: HomeSpacing.sm),
       child: SizedBox(
-        // 🔥 Only list has fixed height — tiles are adaptive
-        height: 120,
+        // Slightly increased height to accommodate the fresher look
+        height: 130, 
         child: ListView.separated(
           key: const PageStorageKey('category-list'),
           scrollDirection: Axis.horizontal,
@@ -31,11 +31,11 @@ class CategoryListWidget extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: HomeSpacing.md,
-            vertical: 8,
+            vertical: 10, // Added vertical padding for shadow breathing room
           ),
           itemCount: categories.length,
           separatorBuilder: (_, __) =>
-              const SizedBox(width: HomeSpacing.sm),
+              const SizedBox(width: HomeSpacing.md), // Slightly wider gap
           itemBuilder: (context, index) {
             final category = categories[index];
 
@@ -54,7 +54,7 @@ class CategoryListWidget extends StatelessWidget {
 }
 
 /* ================================================= */
-/* CATEGORY ICON TILE (ADAPTIVE HEIGHT)               */
+/* CATEGORY ICON TILE (ADAPTIVE HEIGHT)              */
 /* ================================================= */
 
 class CategoryIconTile extends StatelessWidget {
@@ -69,54 +69,78 @@ class CategoryIconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon =
-        _CategoryStyle.iconFor(category.id);
-    final iconColor =
-        _CategoryStyle.iconColorFor(category.id);
+    // Get dynamic colors
+    final iconColor = _CategoryStyle.iconColorFor(category.id);
+    final icon = _CategoryStyle.iconFor(category.id);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 74,
-        padding: const EdgeInsets.symmetric(
-          vertical: 8,
-          horizontal: 6,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              offset: const Offset(3, 7),
-              blurRadius: 8,
-              spreadRadius: -2,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20), // Softer corners
+        child: Container(
+          width: 80, // Slightly wider for better breathing room
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.grey.withOpacity(0.08), // Subtle border
+              width: 1,
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // 🔥 adaptive
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _CategoryIcon(
-              imageUrl: category.imageUrl,
-              icon: icon,
-              iconColor: iconColor,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              category.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: HomeTextStyles.body.copyWith(
-                fontSize: 12,
-                height: 1.1,
-                fontWeight: FontWeight.w600,
+            boxShadow: [
+              // Modern, diffused shadow
+              BoxShadow(
+                color: const Color(0xFF1D1617).withOpacity(0.07),
+                offset: const Offset(0, 8),
+                blurRadius: 15,
+                spreadRadius: -3,
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icon Container
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  // Dynamic background color (15% opacity)
+                  color: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                      ? Colors.grey.withOpacity(0.05)
+                      : iconColor.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: _CategoryIcon(
+                  imageUrl: category.imageUrl,
+                  icon: icon,
+                  iconColor: iconColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+              
+              // Text
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  category.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: HomeTextStyles.body.copyWith(
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -141,16 +165,15 @@ class _CategoryIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+      return ClipOval( // Changed to Oval for consistency with container
         child: Image.network(
           imageUrl!,
-          width: 42,
-          height: 42,
+          width: 48,
+          height: 48,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Icon(
             icon,
-            size: 26,
+            size: 24,
             color: iconColor,
           ),
         ),
@@ -159,14 +182,14 @@ class _CategoryIcon extends StatelessWidget {
 
     return Icon(
       icon,
-      size: 26,
+      size: 24,
       color: iconColor,
     );
   }
 }
 
 /* ================================================= */
-/* CATEGORY STYLE ENGINE                              */
+/* CATEGORY STYLE ENGINE                             */
 /* ================================================= */
 
 class _CategoryStyle {
@@ -196,8 +219,7 @@ class _CategoryStyle {
   }
 
   static Color iconColorFor(String seed) {
-    final index =
-        seed.hashCode.abs() % _iconColors.length;
+    final index = seed.hashCode.abs() % _iconColors.length;
     return _iconColors[index];
   }
 }

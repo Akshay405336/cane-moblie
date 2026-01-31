@@ -8,6 +8,7 @@ class HomeTextStyles {
     fontSize: 18,
     fontWeight: FontWeight.w700,
     color: HomeColors.textDark,
+    letterSpacing: -0.5,
   );
 
   static const TextStyle offerTitle = TextStyle(
@@ -26,32 +27,40 @@ class HomeTextStyles {
   static const TextStyle bodyGrey = TextStyle(
     fontSize: 13,
     color: HomeColors.textGrey,
+    fontWeight: FontWeight.w400,
   );
 
   /* ================= PRODUCT ================= */
 
   static const TextStyle productName = TextStyle(
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: FontWeight.w600,
     color: HomeColors.textDark,
+    height: 1.2, // Better line height for 2 lines
+  );
+
+  static const TextStyle unit = TextStyle(
+    fontSize: 11,
+    color: HomeColors.textGrey,
+    fontWeight: FontWeight.w500,
   );
 
   static const TextStyle price = TextStyle(
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: FontWeight.w800,
-    color: HomeColors.priceGreen,
+    color: HomeColors.textDark, // Modern apps use black for price
   );
 
   static const TextStyle originalPrice = TextStyle(
-    fontSize: 12,
-    color: HomeColors.textGrey,
+    fontSize: 11,
+    color: HomeColors.textLightGrey,
     decoration: TextDecoration.lineThrough,
   );
 
   static const TextStyle discount = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    color: HomeColors.discountRed,
+    fontSize: 10,
+    fontWeight: FontWeight.w800,
+    color: Colors.white,
   );
 
   /* ================= BUTTON ================= */
