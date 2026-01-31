@@ -12,8 +12,27 @@ import '../../checkout/screens/checkout_screen.dart';
 import '../../../utils/auth_required_action.dart';
 import '../../../core/network/url_helper.dart';
 
-class CartPage extends StatelessWidget {
+// ⭐ CHANGED: Converted to StatefulWidget to allow initialization logic
+class CartPage extends StatefulWidget {
   const CartPage({Key? key}) : super(key: key);
+
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
+  // ⭐ ADDED: Triggers the load() function when the page opens
+  @override
+  void initState() {
+    super.initState();
+    // Check if logged in, then fetch data
+    if (AuthController.instance.isLoggedIn) {
+      // Use addPostFrameCallback to safely call the provider/controller
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        CartController.instance.load();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +53,8 @@ class CartPage extends StatelessWidget {
         builder: (_, __) {
           final isLoggedIn = AuthController.instance.isLoggedIn;
           // FIX: Cast to Listenable to support ChangeNotifier
-          final Listenable listenable = isLoggedIn 
-              ? CartController.instance 
+          final Listenable listenable = isLoggedIn
+              ? CartController.instance
               : LocalCartController.instance;
 
           return AnimatedBuilder(
@@ -46,12 +65,14 @@ class CartPage extends StatelessWidget {
 
               final items = isLoggedIn ? server.items : local.items;
               final isLoading = isLoggedIn && server.isLoading;
-              
+
               // Calculate total
               final grandTotal = isLoggedIn
                   ? server.grandTotal
                   : local.items.fold<double>(0, (sum, e) => sum + e.total);
 
+              // Only show loading if we have NO items. 
+              // If we are refreshing, keep showing the old items.
               if (isLoading && items.isEmpty) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -67,7 +88,8 @@ class CartPage extends StatelessWidget {
                       physics: const BouncingScrollPhysics(),
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
@@ -102,7 +124,7 @@ class CartPage extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// ENHANCED UI WIDGETS
+// ENHANCED UI WIDGETS (Unchanged)
 // ---------------------------------------------------------------------------
 
 class _CartCard extends StatelessWidget {
@@ -156,7 +178,7 @@ class _CartCard extends StatelessWidget {
                 // Product Image
                 _CartImage(path: item.image),
                 const SizedBox(width: 16),
-                
+
                 // Product Details
                 Expanded(
                   child: Column(
@@ -167,7 +189,7 @@ class _CartCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 15, 
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
                           height: 1.2,
                         ),
@@ -179,7 +201,7 @@ class _CartCard extends StatelessWidget {
                           Text(
                             '₹${item.total.toStringAsFixed(0)}',
                             style: const TextStyle(
-                              fontSize: 16, 
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
@@ -188,9 +210,11 @@ class _CartCard extends StatelessWidget {
                             qty: item.quantity,
                             onChanged: (val) {
                               if (isLoggedIn) {
-                                CartController.instance.updateQty(item.productId, val);
+                                CartController.instance
+                                    .updateQty(item.productId, val);
                               } else {
-                                LocalCartController.instance.updateQty(item.productId, val);
+                                LocalCartController.instance
+                                    .updateQty(item.productId, val);
                               }
                             },
                           ),
@@ -214,8 +238,12 @@ class _CartCard extends StatelessWidget {
         title: const Text("Remove Item?"),
         content: const Text("Are you sure you want to remove this item?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Remove", style: TextStyle(color: Colors.red))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Remove", style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -225,7 +253,7 @@ class _CartCard extends StatelessWidget {
 class _ModernQtyControl extends StatelessWidget {
   final int qty;
   final Function(int) onChanged;
-  
+
   const _ModernQtyControl({required this.qty, required this.onChanged});
 
   @override
@@ -243,7 +271,8 @@ class _ModernQtyControl extends StatelessWidget {
           _TapIcon(Icons.remove, () => onChanged(qty - 1)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text('$qty', style: const TextStyle(fontWeight: FontWeight.w600)),
+            child:
+                Text('$qty', style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
           _TapIcon(Icons.add, () => onChanged(qty + 1)),
         ],
@@ -256,7 +285,7 @@ class _TapIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   const _TapIcon(this.icon, this.onTap);
-  
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -291,7 +320,8 @@ class _CheckoutBottomBar extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
-          BoxShadow(blurRadius: 20, color: Colors.black12, offset: Offset(0, -4)),
+          BoxShadow(
+              blurRadius: 20, color: Colors.black12, offset: Offset(0, -4)),
         ],
       ),
       child: SafeArea(
@@ -301,10 +331,12 @@ class _CheckoutBottomBar extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total ($itemCount items)', style: TextStyle(color: Colors.grey[600])),
+                Text('Total ($itemCount items)',
+                    style: TextStyle(color: Colors.grey[600])),
                 Text(
                   '₹${grandTotal.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -314,15 +346,21 @@ class _CheckoutBottomBar extends StatelessWidget {
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 onPressed: loading ? null : () => _processCheckout(context),
                 child: loading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2))
                     : Text(
                         isLoggedIn ? 'Proceed to Checkout' : 'Login to Checkout',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ),
@@ -337,18 +375,21 @@ class _CheckoutBottomBar extends StatelessWidget {
       context,
       action: () async {
         try {
-          final locationCtrl = Provider.of<LocationController>(context, listen: false);
+          final locationCtrl =
+              Provider.of<LocationController>(context, listen: false);
           final currentLoc = locationCtrl.current;
           final addressId = currentLoc?.savedAddressId;
 
           if (addressId != null && addressId.isNotEmpty) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => CheckoutScreen(initialAddressId: addressId)),
+              MaterialPageRoute(
+                  builder: (_) => CheckoutScreen(initialAddressId: addressId)),
             );
           } else {
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Please select a delivery address first.")),
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text("Please select a delivery address first.")),
             );
           }
         } catch (e) {
@@ -370,8 +411,10 @@ class _CartImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (path.isEmpty) {
       return Container(
-        width: 70, height: 70,
-        decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+            color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
         child: const Icon(Icons.image_not_supported, color: Colors.grey),
       );
     }
@@ -379,11 +422,15 @@ class _CartImage extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
-        url, width: 70, height: 70, fit: BoxFit.cover,
-        errorBuilder: (_,__,___) => Container(
-          width: 70, height: 70, color: Colors.grey[200], 
-          child: const Icon(Icons.broken_image, color: Colors.grey)
-        ),
+        url,
+        width: 70,
+        height: 70,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+            width: 70,
+            height: 70,
+            color: Colors.grey[200],
+            child: const Icon(Icons.broken_image, color: Colors.grey)),
       ),
     );
   }
@@ -397,11 +444,14 @@ class _EmptyCartView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_basket_outlined, size: 80, color: Colors.grey[300]),
+          Icon(Icons.shopping_basket_outlined,
+              size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          const Text("Your cart is empty", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text("Your cart is empty",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text("Add items to start ordering", style: TextStyle(color: Colors.grey[500])),
+          Text("Add items to start ordering",
+              style: TextStyle(color: Colors.grey[500])),
         ],
       ),
     );

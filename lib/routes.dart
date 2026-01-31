@@ -22,6 +22,7 @@ import 'features/checkout/screens/checkout_screen.dart';
 /* ================= ORDERS ================= */
 
 import 'features/orders/screens/order_details_screen.dart';
+import 'features/orders/screens/my_orders_screen.dart'; // <--- ADDED IMPORT
 
 class AppRoutes {
   /* ================================================= */
@@ -44,6 +45,7 @@ class AppRoutes {
   static const checkout = '/checkout';
 
   // 📦 ORDERS
+  static const myOrders = '/my-orders';        // <--- ADDED ROUTE NAME
   static const orderDetails = '/order-details';
 
   /* ================================================= */
@@ -69,6 +71,7 @@ class AppRoutes {
     checkout: (_) => const CheckoutScreen(),
 
     // 📦 ORDERS
+    myOrders: (_) => const MyOrdersScreen(),     // <--- ADDED ROUTE BUILDER
     orderDetails: (_) => const OrderDetailsScreen(),
   };
 }

@@ -11,68 +11,67 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Profile'),
+        elevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ---------------- ACCOUNT ----------------
-          _ProfileTile(
-            icon: Icons.person_outline,
-            title: 'Account',
-            onTap: () {
-              AppToast.info('Account coming soon');
-            },
-          ),
-
+          // ---------------- ACCOUNT HEADER ----------------
+          // Optional: Add a small header if you have user info
+           const SizedBox(height: 10),
+          
           // ---------------- SAVED ADDRESSES ----------------
           _ProfileTile(
             icon: Icons.location_on_outlined,
-            title: 'Saved addresses',
+            title: 'Saved Addresses',
             onTap: () {
-              Navigator.pushNamed(
-                context,
-                AppRoutes.savedAddresses,
-              );
+              Navigator.pushNamed(context, AppRoutes.savedAddresses);
             },
           ),
 
-          // ---------------- ORDERS ----------------
+          // ---------------- ORDERS (UPDATED) ----------------
           _ProfileTile(
-            icon: Icons.receipt_long_outlined,
-            title: 'Orders',
+            icon: Icons.shopping_bag_outlined, // Better icon for orders
+            title: 'My Orders',
             onTap: () {
-              AppToast.info('Orders coming soon');
+              // ✅ Navigates to the Order List page
+              Navigator.pushNamed(context, AppRoutes.myOrders);
             },
           ),
 
           // ---------------- PAYMENTS ----------------
           _ProfileTile(
             icon: Icons.payment_outlined,
-            title: 'Payments',
+            title: 'Payment Methods',
             onTap: () {
               AppToast.info('Payments coming soon');
             },
           ),
 
-          const Divider(height: 32),
+          const Divider(height: 40, thickness: 1),
 
           // ---------------- LOGOUT ----------------
           _ProfileTile(
-            icon: Icons.logout,
+            icon: Icons.logout_rounded,
             title: 'Logout',
-            textColor: Colors.red,
+            textColor: Colors.red.shade600,
+            iconColor: Colors.red.shade600,
+            showChevron: false,
             onTap: () async {
+              // Show confirmation dialog optionally
               await SessionApi.logout();
               AuthState.reset();
-              AppToast.info('Logged out');
-
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                AppRoutes.login,
-                (_) => false,
-              );
+              
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.login,
+                  (_) => false,
+                );
+              }
             },
           ),
         ],
@@ -90,31 +89,41 @@ class _ProfileTile extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
   final Color? textColor;
+  final Color? iconColor;
+  final bool showChevron;
 
   const _ProfileTile({
     required this.icon,
     required this.title,
     required this.onTap,
     this.textColor,
+    this.iconColor,
+    this.showChevron = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        vertical: 4,
-        horizontal: 8,
-      ),
-      leading: Icon(icon, color: textColor),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: textColor,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // Subtle grey background for modern feel
+        tileColor: Colors.grey.shade50, 
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Icon(icon, color: iconColor ?? Colors.black54),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: textColor ?? Colors.black87,
+            fontSize: 15,
+          ),
         ),
+        trailing: showChevron 
+            ? const Icon(Icons.chevron_right, color: Colors.grey) 
+            : null,
+        onTap: onTap,
       ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
     );
   }
 }

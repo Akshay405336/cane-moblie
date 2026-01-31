@@ -27,6 +27,7 @@ class ProductAddButton extends StatefulWidget {
 }
 
 class _ProductAddButtonState extends State<ProductAddButton> {
+  // ⭐ This variable tracks ONLY this button's loading state
   bool _localLoading = false;
 
   /// Helper to get current quantity based on Auth state
@@ -37,7 +38,6 @@ class _ProductAddButtonState extends State<ProductAddButton> {
     if (isLoggedIn) {
       // Check Server Cart
       final cart = CartController.instance.value;
-      // We use .firstWhere with orElse to handle "not found" safely
       try {
         final item = cart.items.firstWhere((i) => i.productId == productId);
         return item.quantity;
@@ -62,6 +62,8 @@ class _ProductAddButtonState extends State<ProductAddButton> {
 
   Future<void> _updateQty(int newQty) async {
     if (_localLoading) return;
+    
+    // ⭐ Start showing spinner for THIS button only
     setState(() => _localLoading = true);
 
     final isLoggedIn = AuthController.instance.isLoggedIn;
@@ -70,8 +72,6 @@ class _ProductAddButtonState extends State<ProductAddButton> {
     try {
       if (isLoggedIn) {
         /* ================= SERVER CART UPDATE ================= */
-        // If we are adding for the first time (qty 0 -> 1), use addItem
-        // otherwise use updateQty for increment/decrement
         if (newQty == 1 && _getCurrentQty() == 0) {
           await CartController.instance.addItem(
             outletId: widget.outletId,
@@ -83,10 +83,6 @@ class _ProductAddButtonState extends State<ProductAddButton> {
         }
       } else {
         /* ================= LOCAL CART UPDATE ================= */
-        // For local cart, updateQty handles both remove (if 0) and update
-        // But if it's a new item (qty 0 -> 1), we must use addItem because
-        // updateQty in LocalCartController requires the item to exist.
-        
         if (newQty == 1 && _getCurrentQty() == 0) {
            LocalCartController.instance.addItem(
             productId: product.id,
@@ -104,6 +100,7 @@ class _ProductAddButtonState extends State<ProductAddButton> {
       widget.onTap?.call();
     } finally {
       if (mounted) {
+        // ⭐ Stop showing spinner
         setState(() => _localLoading = false);
       }
     }
@@ -111,7 +108,7 @@ class _ProductAddButtonState extends State<ProductAddButton> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to BOTH controllers. If either updates, the button rebuilds.
+    // Listen to BOTH controllers so the number updates automatically
     return AnimatedBuilder(
       animation: Listenable.merge([
         CartController.instance,
@@ -119,12 +116,10 @@ class _ProductAddButtonState extends State<ProductAddButton> {
       ]),
       builder: (context, _) {
         final qty = _getCurrentQty();
-        final isGlobalLoading = CartController.instance.isLoading;
         
-        // Prevent interaction if global cart is syncing or local button is processing
-        final isLoading = _localLoading || (isGlobalLoading && qty > 0); 
-        // Note: We allow minor loading blocking only on the specific item if desired, 
-        // but here we block if *this* specific action triggered it.
+        // ⭐ FIX: We ONLY use _localLoading for the spinner. 
+        // We removed the check for 'CartController.instance.isLoading' here.
+        final isLoading = _localLoading;
 
         if (qty > 0) {
           /* ------------------------------------------------ */
@@ -134,7 +129,7 @@ class _ProductAddButtonState extends State<ProductAddButton> {
             height: 32,
             constraints: const BoxConstraints(minWidth: 80),
             decoration: BoxDecoration(
-              color: HomeColors.primaryGreen, // Active background
+              color: HomeColors.primaryGreen,
               borderRadius: BorderRadius.circular(HomeSpacing.radiusSm),
             ),
             child: Row(
@@ -148,7 +143,7 @@ class _ProductAddButtonState extends State<ProductAddButton> {
 
                 // QTY TEXT
                 SizedBox(
-                  width: 20, // Fixed width for stability
+                  width: 20,
                   child: isLoading
                       ? const Center(
                           child: SizedBox(
@@ -224,7 +219,6 @@ class _ProductAddButtonState extends State<ProductAddButton> {
   }
 }
 
-/// Small helper widget for the +/- buttons to keep code clean
 class _IconBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
