@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../store/models/outlet.model.dart';
-import '../../store/widgets/outlet_card.widget.dart';
+// ⭐ IMPORT THE NEW WIDGET
+import '../widgets/store_product_list.widget.dart'; 
 
 import '../theme/home_spacing.dart';
 import '../theme/home_text_styles.dart';
@@ -69,11 +70,13 @@ class HomeOutletsSection extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               itemCount: outlets.length,
               separatorBuilder: (_, __) =>
-                  const SizedBox(height: HomeSpacing.md),
+                  // Increased spacing to handle the larger cards
+                  const SizedBox(height: HomeSpacing.xl),
               itemBuilder: (_, index) {
                 final outlet = outlets[index];
 
-                return OutletCard(outlet: outlet);
+                // ⭐ UPDATED: Using the new Store+Product wrapper
+                return StoreWithProductsWidget(outlet: outlet);
               },
             ),
           ),

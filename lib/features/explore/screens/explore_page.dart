@@ -3,33 +3,77 @@ import 'package:flutter/material.dart';
 class ExplorePage extends StatelessWidget {
   const ExplorePage({Key? key}) : super(key: key);
 
+  // ---------------------------------------------------------------------------
+  // 🖼️ IMAGE ASSETS
+  // These paths match the folder 'assets/images/' defined in your pubspec.yaml
+  // ---------------------------------------------------------------------------
+  static const String kHeroBgImage = 'assets/images/tender_coconut.jpg';
+  static const String kSugarcaneImage = 'assets/images/banner.jpg';  // Replace with specific image if you have one
+  static const String kCoconutImage = 'assets/images/banner2.jpg';   // Replace with specific image if you have one
+  static const String kFruitImage = 'assets/images/cate-1.jpg';     // Replace with specific image if you have one
+
+  // ---------------------------------------------------------------------------
+  // 🎨 THEME COLORS
+  // ---------------------------------------------------------------------------
+  static const Color kPrimaryGreen = Color(0xFF2E7D32);
+  static const Color kAccentLime = Color(0xFFC6FF00);
+  static const Color kCreamBackground = Color(0xFFFAFCF8);
+  static const Color kSurfaceWhite = Colors.white;
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        const SizedBox(height: 16),
+    return Scaffold(
+      backgroundColor: kCreamBackground,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        centerTitle: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Good Morning,',
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            Text(
+              'Fresh Explorer 👋',
+              style: TextStyle(
+                  color: kPrimaryGreen,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+      body: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
+        children: [
+          // 🌱 HERO
+          _buildImmersiveHero(),
 
-        // 🌱 HERO
-        _hero(),
+          const SizedBox(height: 32),
 
-        const SizedBox(height: 24),
+          // ✨ VALUE PROPS
+          _buildSectionHeader('Why Cane & Tender?', 'Pure nature in a bottle'),
+          const SizedBox(height: 16),
+          _buildInfoRow(),
 
-        _sectionTitle('Why Cane & Tender'),
-        _infoCards(),
+          const SizedBox(height: 32),
 
-        const SizedBox(height: 28),
+          // 🥥 INGREDIENTS
+          _buildSectionHeader('Our Ingredients', 'Sourced from the best farms'),
+          const SizedBox(height: 16),
+          _buildIngredientScroll(),
 
-        _sectionTitle('Explore Ingredients'),
-        _ingredientRow(),
+          const SizedBox(height: 32),
 
-        const SizedBox(height: 28),
-
-        _sectionTitle('Did you know?'),
-        _facts(),
-
-        const SizedBox(height: 32),
-      ],
+          // 💡 FACTS
+          _buildSectionHeader('Did you know?', 'Health tidbits for you'),
+          const SizedBox(height: 16),
+          _buildFactCards(),
+        ],
+      ),
     );
   }
 
@@ -37,201 +81,277 @@ class ExplorePage extends StatelessWidget {
   // SECTIONS
   // ------------------------------------------------------------------
 
-  Widget _hero() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF81C784),
-            Color(0xFF4CAF50),
-          ],
+  Widget _buildImmersiveHero() {
+    return Stack(
+      children: [
+        Container(
+          height: 220,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: kPrimaryGreen.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+            image: const DecorationImage(
+              // ✅ USES LOCAL ASSET
+              image: AssetImage(kHeroBgImage),
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
-      ),
-      child: Row(
-        children: const [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pure.\nFresh.\nNatural.',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Discover the goodness of sugarcane, coconut and fruits 🍹',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
+        // Overlay
+        Container(
+          height: 220,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withOpacity(0.1),
+                Colors.black.withOpacity(0.7),
               ],
             ),
           ),
-          Icon(
-            Icons.eco,
-            size: 64,
-            color: Colors.white,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: kAccentLime,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '#1 Best Seller',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Pure. Fresh. Natural.',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Discover the goodness of sugarcane, coconut & fruits.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF1B5E20),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _infoCards() {
+  Widget _buildSectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1B5E20),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow() {
     final items = [
-      ('No added sugar', Icons.block),
-      ('Freshly pressed', Icons.local_drink),
-      ('Hygienic process', Icons.verified),
+      ('No Sugar', Icons.spa_outlined),
+      ('Pressed', Icons.water_drop_outlined),
+      ('Hygienic', Icons.verified_user_outlined),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: items.map((e) {
-          return Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: items.map((e) {
+        return Container(
+          width: 100,
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: kSurfaceWhite,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: Column(
-                children: [
-                  Icon(
-                    e.$2,
-                    color: const Color(0xFF66BB6A),
-                    size: 28,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    e.$1,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2E7D32),
-                    ),
-                  ),
-                ],
+            ],
+            border: Border.all(color: Colors.grey.shade100),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: kPrimaryGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(e.$2, color: kPrimaryGreen, size: 24),
               ),
-            ),
-          );
-        }).toList(),
-      ),
+              const SizedBox(height: 12),
+              Text(
+                e.$1,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF424242),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _ingredientRow() {
+  Widget _buildIngredientScroll() {
     final items = [
-      ('Sugarcane', 'Energy booster 🌱'),
-      ('Coconut', 'Natural hydration 🥥'),
-      ('Fruits', 'Vitamin rich 🍎'),
+      ('Sugarcane', 'Energy', kSugarcaneImage),
+      ('Coconut', 'Hydrate', kCoconutImage),
+      ('Apple', 'Vitamin', kFruitImage),
     ];
 
     return SizedBox(
-      height: 120,
+      height: 160,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (_, i) {
           return Container(
-            width: 160,
-            padding: const EdgeInsets.all(16),
+            width: 130,
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F8E9),
-              borderRadius: BorderRadius.circular(18),
+              color: kSurfaceWhite,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.grey.withOpacity(0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4))
+              ],
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  items[i].$1,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF33691E),
+                Expanded(
+                  flex: 3,
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                    // ✅ USES LOCAL ASSET
+                    child: Image.asset(
+                      items[i].$3,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  items[i].$2,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF558B2F),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          items[i].$1,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        Text(
+                          items[i].$2,
+                          style: TextStyle(
+                              color: Colors.grey[500], fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           );
         },
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemCount: items.length,
       ),
     );
   }
 
-  Widget _facts() {
+  Widget _buildFactCards() {
     final facts = [
-      'Sugarcane juice helps reduce dehydration 💧',
-      'Coconut water is rich in electrolytes 🥥',
-      'Fresh juices boost immunity naturally 🌱',
+      'Sugarcane juice helps reduce dehydration immediately.',
+      'Coconut water is rich in natural electrolytes.',
+      'Fresh cold-pressed juices boost immunity naturally.',
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: facts.map((fact) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.lightbulb_outline,
-                  color: Color(0xFF81C784),
+    return Column(
+      children: facts.map((fact) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: kSurfaceWhite,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withOpacity(0.1)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                height: 40,
+                width: 4,
+                decoration: BoxDecoration(
+                  color: kAccentLime,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    fact,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF33691E),
-                    ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  fact,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Color(0xFF555555),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

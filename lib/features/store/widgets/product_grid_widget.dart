@@ -5,14 +5,15 @@ import '../../home/theme/home_spacing.dart';
 import 'product_card.dart';
 
 /// =================================================
-/// Product grid (2-column)
-/// Used in:
-/// - OutletProductsScreen
+/// Professional Product Grid (Sliver)
+/// 
+/// Improvements:
+/// 1. Uses [SliverGrid] for high performance (Lazy loading).
+/// 2. Uses [MaxCrossAxisExtent] for responsiveness (Works on tablets too).
+/// 3. Standardized aspect ratio for grocery apps.
 /// =================================================
 class ProductGridWidget extends StatelessWidget {
   final List<Product> products;
-
-  /// outlet context (needed for socket + navigation)
   final String outletId;
 
   const ProductGridWidget({
@@ -23,39 +24,43 @@ class ProductGridWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // If empty, Slivers require a widget that takes up no space but is still a sliver.
     if (products.isEmpty) {
-      return const SizedBox(); // clean empty
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    return GridView.builder(
-      key: const PageStorageKey('product-grid'),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return SliverPadding(
       padding: const EdgeInsets.symmetric(
         horizontal: HomeSpacing.md,
         vertical: HomeSpacing.sm,
       ),
-      itemCount: products.length,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      sliver: SliverGrid(
+        key: const PageStorageKey('product-grid'),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final product = products[index];
+            return ProductCard(
+              key: ValueKey(product.id), 
+              product: product,
+              outletId: outletId,
+            );
+          },
+          childCount: products.length,
+        ),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          // ⭐ RESPONSIVE:
+          // Instead of fixing count to 2, we say "items should be max 200px wide".
+          // On mobile: fits 2 items. On tablet: fits 3 or 4 items automatically.
+          maxCrossAxisExtent: 220,
+          
+          mainAxisSpacing: HomeSpacing.md,
+          crossAxisSpacing: HomeSpacing.md,
 
-        /// grocery style spacing
-        mainAxisSpacing: HomeSpacing.md,
-        crossAxisSpacing: HomeSpacing.md,
-
-        /// card height tuning
-        childAspectRatio: 0.64,
+          // ⭐ ASPECT RATIO: 
+          // 0.65 - 0.70 is standard for grocery cards (Image + Title + Unit + Price/Btn)
+          childAspectRatio: 0.68, 
+        ),
       ),
-      itemBuilder: (_, index) {
-        final product = products[index];
-
-        return ProductCard(
-          key: ValueKey(product.id), // stable during realtime updates
-          product: product,
-          outletId: outletId, // ⭐ pass outlet
-        );
-      },
     );
   }
 }
