@@ -50,22 +50,35 @@ class OutletSocketService {
     _socket!.on('outlets.updated', (data) {
       debugPrint('📡 RAW EVENT → outlets.updated => $data');
 
-      if (data == null || data['outlets'] == null) return;
+      if (data == null || data['outlets'] == null) {
+        debugPrint('⚠️ outlets.updated → empty payload');
+        return;
+      }
 
-      final List list = data['outlets'];
+      try {
+        final List list = data['outlets'];
 
-      final outlets = list
-          .map((e) => Outlet.fromJson(
-                Map<String, dynamic>.from(e),
-              ))
-          .toList();
+        /// ⭐⭐⭐ IMPORTANT FIX HERE ⭐⭐⭐
+        final outlets = list.map((e) {
+          final wrapper = Map<String, dynamic>.from(e);
 
-      _cachedOutlets = outlets;
+          final outletJson =
+              Map<String, dynamic>.from(wrapper['outlet']); // 🔥 FIX
 
-      debugPrint('📦 SOCKET → parsed outlets (${outlets.length})');
+          return Outlet.fromJson(outletJson);
+        }).toList();
 
-      for (final l in _listeners) {
-        l(outlets);
+        _cachedOutlets = outlets;
+
+        debugPrint(
+            '📦 SOCKET → parsed outlets (${outlets.length})');
+
+        for (final l in _listeners) {
+          l(outlets);
+        }
+      } catch (e, s) {
+        debugPrint('❌ Socket parse crash → $e');
+        debugPrintStack(stackTrace: s);
       }
     });
 
@@ -133,9 +146,6 @@ class OutletSocketService {
 
   static void disconnect() {
     debugPrint('🔌 Outlet socket disconnect');
-
-    // ❌ DO NOT clear listeners
-    // listeners belong to UI lifecycle
 
     _cachedOutlets = [];
 

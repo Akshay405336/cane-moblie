@@ -29,16 +29,24 @@ class OutletApi {
         },
       );
 
-      final list =
-          (response.data['data'] as List?) ?? const [];
+      final body = response.data;
 
-      return list
-          .map(
-            (e) => Outlet.fromJson(
-              Map<String, dynamic>.from(e),
-            ),
-          )
+      if (body == null || body['data'] == null) {
+        debugPrint('⚠️ Empty outlets response');
+        return [];
+      }
+
+      final list =
+          List<Map<String, dynamic>>.from(body['data']);
+
+      final outlets = list
+          .map(Outlet.fromJson)
           .toList();
+
+      debugPrint(
+          '✅ REST outlets parsed → count=${outlets.length}');
+
+      return outlets;
     } catch (e, s) {
       debugPrint('❌ OutletApi.getNearby → $e');
       debugPrintStack(stackTrace: s);
@@ -60,16 +68,24 @@ class OutletApi {
       final response =
           await _dio.get('/public/outlets/$outletId/products');
 
-      final list =
-          (response.data['data'] as List?) ?? const [];
+      final body = response.data;
 
-      return list
-          .map(
-            (e) => Product.fromJson(
-              Map<String, dynamic>.from(e),
-            ),
-          )
+      if (body == null || body['data'] == null) {
+        debugPrint('⚠️ Empty products response');
+        return [];
+      }
+
+      final list =
+          List<Map<String, dynamic>>.from(body['data']);
+
+      final products = list
+          .map(Product.fromJson)
           .toList();
+
+      debugPrint(
+          '✅ Products parsed → count=${products.length}');
+
+      return products;
     } catch (e, s) {
       debugPrint(
           '❌ OutletApi.getOutletProducts → $e');

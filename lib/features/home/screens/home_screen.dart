@@ -46,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
+    debugPrint('🏠 HomeScreen init');
+
     /* ---------- categories ---------- */
 
     CategorySocketService.subscribe(_onCategories);
@@ -70,12 +72,38 @@ class _HomeScreenState extends State<HomeScreen> {
   /* ================================================= */
 
   void _connectOutletSocket(double lat, double lng) {
-    debugPrint('🚀 Home → connecting outlets lat=$lat lng=$lng');
+    debugPrint('🚀 Connect outlets → $lat,$lng');
 
     setState(() => _loadingOutlets = true);
 
     OutletSocketService.disconnect();
     OutletSocketService.connect(lat: lat, lng: lng);
+  }
+
+  /* ================================================= */
+  /* HANDLERS                                          */
+  /* ================================================= */
+
+  void _onCategories(List<Category> categories) {
+    if (!mounted) return;
+
+    debugPrint('📦 Categories received: ${categories.length}');
+
+    setState(() {
+      _categories = categories;
+      _loadingCategories = false;
+    });
+  }
+
+  void _onOutlets(List<Outlet> outlets) {
+    if (!mounted) return;
+
+    debugPrint('🏪 Outlets received: ${outlets.length}');
+
+    setState(() {
+      _outlets = outlets;
+      _loadingOutlets = false;
+    });
   }
 
   /* ================================================= */
@@ -90,52 +118,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /* ================================================= */
-  /* HANDLERS                                          */
-  /* ================================================= */
-
-  void _onCategories(List<Category> categories) {
-    if (!mounted) return;
-
-    setState(() {
-      _categories = categories;
-      _loadingCategories = false;
-    });
-  }
-
-  void _onOutlets(List<Outlet> outlets) {
-    if (!mounted) return;
-
-    setState(() {
-      _outlets = outlets;
-      _loadingOutlets = false;
-    });
-  }
-
-  /* ================================================= */
   /* UI                                                */
   /* ================================================= */
 
   @override
   Widget build(BuildContext context) {
-    /* ================================================= */
-    /* ⭐ CORRECT LOCATION WATCH (MOVED FROM didChangeDependencies) */
-    /* ================================================= */
-
     final location = context.watch<LocationController>();
 
     final lat = location.current?.latitude;
     final lng = location.current?.longitude;
 
-    if (lat != null && lng != null) {
-      if (_lastLat != lat || _lastLng != lng) {
-        _lastLat = lat;
-        _lastLng = lng;
+    /// ⭐ connect only when coordinates change
+    if (lat != null &&
+        lng != null &&
+        (_lastLat != lat || _lastLng != lng)) {
+      _lastLat = lat;
+      _lastLng = lng;
 
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _connectOutletSocket(lat, lng);
-        });
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _connectOutletSocket(lat, lng);
+      });
     }
+
+    debugPrint(
+        '🎨 Build → loading=$_loadingOutlets outlets=${_outlets.length}');
 
     return Scaffold(
       backgroundColor: HomeColors.pureWhite,

@@ -4,7 +4,6 @@ class Outlet {
   final String branch;
 
   final String status;
-
   final String workingStateStatus;
 
   final double latitude;
@@ -12,7 +11,10 @@ class Outlet {
 
   final int deliveryRadiusKm;
 
-  Outlet({
+  /// ⭐ optional (backend already sends it)
+  final double? distanceKm;
+
+  const Outlet({
     required this.id,
     required this.name,
     required this.branch,
@@ -21,36 +23,51 @@ class Outlet {
     required this.latitude,
     required this.longitude,
     required this.deliveryRadiusKm,
+    this.distanceKm,
   });
 
   /* ================================================= */
-  /* JSON                                               */
+  /* JSON (SAFE + DEFENSIVE) ⭐                         */
   /* ================================================= */
 
   factory Outlet.fromJson(Map<String, dynamic> json) {
+    final location =
+        (json['location'] as Map?)?.cast<String, dynamic>() ?? {};
+
+    final workingState =
+        (json['workingState'] as Map?)?.cast<String, dynamic>() ?? {};
+
     return Outlet(
-      id: json['id'],
-      name: json['name'],
-      branch: json['branch'],
-      status: json['status'],
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      branch: json['branch'] ?? '',
+      status: json['status'] ?? 'UNKNOWN',
 
-      /// ⭐ map nested object correctly
       workingStateStatus:
-          json['workingState']?['status'] ?? 'CLOSED',
+          workingState['status'] ?? 'CLOSED',
 
-      latitude: json['location']['latitude'] * 1.0,
-      longitude: json['location']['longitude'] * 1.0,
+      latitude: (location['latitude'] as num?)?.toDouble() ?? 0,
+      longitude: (location['longitude'] as num?)?.toDouble() ?? 0,
 
       deliveryRadiusKm:
-          json['deliveryRadiusKm'] ?? 5,
+          (json['deliveryRadiusKm'] as num?)?.toInt() ?? 5,
+
+      distanceKm:
+          (json['distanceKm'] as num?)?.toDouble(),
     );
   }
 
   /* ================================================= */
-  /* CLEAN GETTER (for UI) ⭐                           */
+  /* CLEAN GETTERS                                     */
   /* ================================================= */
 
   String get workingStatus => workingStateStatus;
 
-  bool get isOpen => workingStateStatus == 'OPEN';
+  bool get isOpen =>
+      workingStateStatus.toUpperCase() == 'OPEN';
+
+  bool get hasDistance => distanceKm != null;
+
+  String get distanceLabel =>
+      distanceKm == null ? '' : '${distanceKm!.toStringAsFixed(2)} km';
 }
