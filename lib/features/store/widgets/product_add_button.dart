@@ -36,7 +36,7 @@ class _ProductAddButtonState extends State<ProductAddButton> {
     if (isLoggedIn) {
       final cartController = CartController.instance;
 
-      // 🔥 FIX: cart from another outlet → show 0
+      // 🔥 Cart from another outlet → treat as empty
       if (!cartController.isSameOutlet(widget.outletId)) {
         return 0;
       }
@@ -62,6 +62,35 @@ class _ProductAddButtonState extends State<ProductAddButton> {
   }
 
   /* ================================================= */
+  /* REPLACE CONFIRMATION DIALOG                       */
+  /* ================================================= */
+
+  Future<bool> _confirmReplaceCart() async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text('Replace cart?'),
+            content: const Text(
+              'Your cart contains items from another outlet. '
+              'Do you want to replace the cart with items from this outlet?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Replace'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  /* ================================================= */
   /* ACTIONS                                          */
   /* ================================================= */
 
@@ -75,14 +104,30 @@ class _ProductAddButtonState extends State<ProductAddButton> {
 
     try {
       if (isLoggedIn) {
-        if (newQty == 1 && _getCurrentQty() == 0) {
-          await CartController.instance.addItem(
+        final cartController = CartController.instance;
+
+        // 🔥 FIRST ADD & CART FROM ANOTHER OUTLET
+        if (newQty == 1 &&
+            _getCurrentQty() == 0 &&
+            cartController.hasCart &&
+            !cartController.isSameOutlet(widget.outletId)) {
+          final shouldReplace = await _confirmReplaceCart();
+          if (!shouldReplace) return;
+
+          await cartController.addItem(
+            outletId: widget.outletId,
+            productId: product.id,
+            quantity: 1,
+            forceReplace: true,
+          );
+        } else if (newQty == 1 && _getCurrentQty() == 0) {
+          await cartController.addItem(
             outletId: widget.outletId,
             productId: product.id,
             quantity: 1,
           );
         } else {
-          await CartController.instance.updateQty(
+          await cartController.updateQty(
             product.id,
             newQty,
           );
