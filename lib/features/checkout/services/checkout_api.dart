@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../../../core/network/http_client.dart';
 import '../models/checkout_summary.model.dart';
-import '../../orders/models/order.model.dart'; // Ensure you have this model
+import '../../orders/models/order.model.dart';
 
 class CheckoutApi {
   CheckoutApi._();
@@ -9,36 +9,50 @@ class CheckoutApi {
   static final _dio = AppHttpClient.dio;
 
   /* ================================================= */
-  /* GET SUMMARY                                       */
+  /* GET SUMMARY (🔥 outletId REQUIRED)                */
   /* ================================================= */
 
-  static Future<CheckoutSummary?> getSummary(String addressId) async {
+  static Future<CheckoutSummary?> getSummary({
+    required String addressId,
+    required String outletId,
+  }) async {
     try {
-      debugPrint('💳 GET /checkout/summary/$addressId');
-      
-      final res = await _dio.get('/checkout/summary/$addressId');
-      
+      debugPrint('💳 GET /checkout/summary/$addressId?outletId=$outletId');
+
+      final res = await _dio.get(
+        '/checkout/summary/$addressId',
+        queryParameters: {
+          'outletId': outletId,
+        },
+      );
+
       if (res.data != null && res.data['success'] == true) {
         return CheckoutSummary.fromJson(res.data['data']);
       }
       return null;
     } catch (e) {
       debugPrint('❌ Checkout Summary Failed: $e');
-      rethrow; // Pass error to controller
+      rethrow;
     }
   }
 
   /* ================================================= */
-  /* START CHECKOUT                                    */
+  /* START CHECKOUT                                   */
   /* ================================================= */
 
-  static Future<Map<String, String>> startCheckout(String addressId) async {
+  static Future<Map<String, String>> startCheckout({
+    required String outletId,
+    required String addressId,
+  }) async {
     try {
       debugPrint('💳 POST /checkout/start');
 
       final res = await _dio.post(
         '/checkout/start',
-        data: {'savedAddressId': addressId},
+        data: {
+          'outletId': outletId,
+          'savedAddressId': addressId,
+        },
       );
 
       final data = res.data['data'];
@@ -53,7 +67,7 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* CONFIRM PAYMENT (Mock)                            */
+  /* CONFIRM PAYMENT                                  */
   /* ================================================= */
 
   static Future<void> confirmPayment(String paymentId) async {
@@ -67,7 +81,7 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* GET ORDER                                         */
+  /* GET ORDER                                        */
   /* ================================================= */
 
   static Future<Order> getOrder(String orderId) async {

@@ -19,7 +19,11 @@ class _AddressSelectorSheetState extends State<AddressSelectorSheet> {
   @override
   void initState() {
     super.initState();
-    Provider.of<SavedAddressController>(context, listen: false).load();
+
+    // 🔥 FIX: avoid notifyListeners during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SavedAddressController>(context, listen: false).load();
+    });
   }
 
   @override
@@ -32,16 +36,21 @@ class _AddressSelectorSheetState extends State<AddressSelectorSheet> {
       padding: const EdgeInsets.symmetric(vertical: 16),
       constraints: const BoxConstraints(maxHeight: 500),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text("Select Address", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text(
+              "Select Address",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
           const Divider(),
           if (isLoading)
-            const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(child: CircularProgressIndicator()),
+            )
           else if (addresses.isEmpty)
             Padding(
               padding: const EdgeInsets.all(20),
@@ -50,11 +59,11 @@ class _AddressSelectorSheetState extends State<AddressSelectorSheet> {
                   children: [
                     const Text("No saved addresses found."),
                     TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          // TODO: Navigate to Add Address page
-                        },
-                        child: const Text("Add New Address"))
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text("Add New Address"),
+                    )
                   ],
                 ),
               ),
@@ -62,22 +71,29 @@ class _AddressSelectorSheetState extends State<AddressSelectorSheet> {
           else
             Expanded(
               child: ListView.builder(
-                shrinkWrap: true,
                 itemCount: addresses.length,
                 itemBuilder: (ctx, i) {
                   final addr = addresses[i];
+
                   return ListTile(
                     leading: Icon(
                       _getIconForType(addr.type),
                       color: HomeColors.primaryGreen,
                     ),
-                    title: Text(addr.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(addr.address, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(
+                      addr.label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      addr.address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     onTap: () {
-                      // 1. Update Checkout API
+                      // 1. Load checkout summary
                       CheckoutController.instance.changeAddress(addr.id);
 
-                      // 2. Update Global Location State
+                      // 2. Update location state
                       final newLocation = LocationData(
                         latitude: addr.lat,
                         longitude: addr.lng,
@@ -85,9 +101,13 @@ class _AddressSelectorSheetState extends State<AddressSelectorSheet> {
                         formattedAddress: addr.address,
                         savedAddressId: addr.id,
                       );
-                      Provider.of<LocationController>(context, listen: false).setSaved(newLocation);
 
-                      // 3. Close
+                      Provider.of<LocationController>(
+                        context,
+                        listen: false,
+                      ).setSaved(newLocation);
+
+                      // 3. Close sheet
                       Navigator.pop(context);
                     },
                   );
