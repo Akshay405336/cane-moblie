@@ -24,16 +24,14 @@ class CartApi {
   }
 
   /* ================================================= */
-  /* COMMON REQUEST WRAPPER (DRY + SAFE)               */
+  /* COMMON REQUEST WRAPPER                            */
   /* ================================================= */
 
   static Future<Cart?> _request(Future<dynamic> call) async {
     try {
       final res = await call;
-
       final data =
           (res.data is Map<String, dynamic>) ? res.data['data'] : null;
-
       return _parseResponse(data);
     } catch (e) {
       debugPrint('❌ CartApi request failed → $e');
@@ -42,25 +40,33 @@ class CartApi {
   }
 
   /* ================================================= */
-  /* GET CART                                          */
+  /* GET CART (🔥 outletId REQUIRED)                   */
   /* ================================================= */
 
-  static Future<Cart?> getCart() {
-    debugPrint('🛒 GET /cart');
+  static Future<Cart?> getCart({
+    required String outletId,
+  }) {
+    debugPrint('🛒 GET /cart?outletId=$outletId');
 
     return _request(
-      _dio.get('/cart'),
+      _dio.get(
+        '/cart',
+        queryParameters: {
+          'outletId': outletId,
+        },
+      ),
     );
   }
 
   /* ================================================= */
-  /* ADD ITEM                                          */
+  /* ADD ITEM (already correct)                        */
   /* ================================================= */
 
   static Future<Cart?> addItem({
     required String outletId,
     required String productId,
     int quantity = 1,
+    bool forceReplace = false,
   }) {
     debugPrint('🛒 ADD item → $productId x$quantity');
 
@@ -71,16 +77,18 @@ class CartApi {
           "outletId": outletId,
           "productId": productId,
           "quantity": quantity,
+          "forceReplace": forceReplace,
         },
       ),
     );
   }
 
   /* ================================================= */
-  /* UPDATE QTY                                        */
+  /* UPDATE QTY (🔥 outletId REQUIRED)                 */
   /* ================================================= */
 
   static Future<Cart?> updateQty({
+    required String outletId,
     required String productId,
     required int quantity,
   }) {
@@ -89,6 +97,9 @@ class CartApi {
     return _request(
       _dio.patch(
         '/cart/items/$productId',
+        queryParameters: {
+          'outletId': outletId,
+        },
         data: {
           "quantity": quantity,
         },
@@ -97,26 +108,41 @@ class CartApi {
   }
 
   /* ================================================= */
-  /* REMOVE ITEM                                       */
+  /* REMOVE ITEM (🔥 outletId REQUIRED)                */
   /* ================================================= */
 
-  static Future<Cart?> remove(String productId) {
+  static Future<Cart?> remove({
+    required String outletId,
+    required String productId,
+  }) {
     debugPrint('🛒 REMOVE item → $productId');
 
     return _request(
-      _dio.delete('/cart/items/$productId'),
+      _dio.delete(
+        '/cart/items/$productId',
+        queryParameters: {
+          'outletId': outletId,
+        },
+      ),
     );
   }
 
   /* ================================================= */
-  /* CLEAR CART                                        */
+  /* CLEAR CART (🔥 outletId REQUIRED)                 */
   /* ================================================= */
 
-  static Future<Cart?> clear() {
+  static Future<Cart?> clear({
+    required String outletId,
+  }) {
     debugPrint('🛒 CLEAR cart');
 
     return _request(
-      _dio.delete('/cart'),
+      _dio.delete(
+        '/cart',
+        queryParameters: {
+          'outletId': outletId,
+        },
+      ),
     );
   }
 }

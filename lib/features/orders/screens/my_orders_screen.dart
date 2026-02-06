@@ -1,8 +1,9 @@
+import 'package:caneandtender/env.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/http_client.dart';
-import '../../../routes.dart';
+import '../../../routes.dart'; // ✅ Added Import for Env
 import '../models/order.model.dart';
 
 class MyOrdersScreen extends StatefulWidget {
@@ -92,9 +93,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 class _ProOrderTile extends StatelessWidget {
   final Order order;
   
-  // ✅ UPDATED BASE URL FROM YOUR LOGS
-  static const String _baseUrl = "https://psp-reprint-websites-entered.trycloudflare.com/";
-
+  // ✅ Removed hardcoded _baseUrl string
+  
   const _ProOrderTile({required this.order});
 
   @override
@@ -111,9 +111,9 @@ class _ProOrderTile extends StatelessWidget {
     // 2. Image URL Construction
     String imageUrl = order.firstProductImage;
     if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      // Remove leading slash if strictly necessary, usually valid URLs ignore double slash
       if (imageUrl.startsWith('/')) imageUrl = imageUrl.substring(1);
-      imageUrl = "$_baseUrl$imageUrl";
+      // ✅ Connected directly to Env.baseUrl
+      imageUrl = "${Env.baseUrl}$imageUrl";
     }
 
     // 3. Status Color

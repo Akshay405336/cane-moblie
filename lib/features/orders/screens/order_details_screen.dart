@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/http_client.dart';
+import '../../../env.dart'; // ✅ Added Import for Env
 
 class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key});
@@ -13,8 +14,8 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   Map<String, dynamic>? order;
   bool loading = true;
-  // Use your real base URL here (matching your logs)
-  static const String _baseUrl = "https://psp-reprint-websites-entered.trycloudflare.com/";
+  
+  // ✅ Removed hardcoded _baseUrl string
 
   @override
   void didChangeDependencies() {
@@ -120,7 +121,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final item = items[index];
-                return _ItemTile(item: item, baseUrl: _baseUrl);
+                // ✅ Passing Env.baseUrl here
+                return _ItemTile(item: item, baseUrl: Env.baseUrl);
               },
             ),
           ),
