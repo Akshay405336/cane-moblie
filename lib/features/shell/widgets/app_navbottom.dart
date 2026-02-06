@@ -67,10 +67,13 @@ class AppNavBottom extends StatelessWidget {
                 label: 'Cart',
               ),
 
+              /* ================= ORDERS (UPDATED) ================= */
               const BottomNavigationBarItem(
-                icon: Icon(Icons.repeat),
-                label: 'Reorders',
+                icon: Icon(Icons.shopping_bag_outlined), // ✅ Changed Icon
+                activeIcon: Icon(Icons.shopping_bag),    // ✅ Active Icon
+                label: 'Orders',                         // ✅ Renamed Label
               ),
+
               const BottomNavigationBarItem(
                 icon: Icon(Icons.store_outlined),
                 label: 'Store',
@@ -88,7 +91,7 @@ class AppNavBottom extends StatelessWidget {
 }
 
 /* ================================================= */
-/* CART ICON (clean + reusable)                       */
+/* CART ICON (clean + reusable)                      */
 /* ================================================= */
 
 class _CartIcon extends StatelessWidget {
