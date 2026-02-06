@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/http_client.dart';
-import '../../../env.dart'; // ✅ Added Import for Env
+import '../../../core/network/url_helper.dart'; // ✅ Added UrlHelper
+// import '../../../env.dart'; // ❌ Removed Env import (Not needed with UrlHelper)
 
 class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key});
@@ -14,8 +15,6 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   Map<String, dynamic>? order;
   bool loading = true;
-  
-  // ✅ Removed hardcoded _baseUrl string
 
   @override
   void didChangeDependencies() {
@@ -121,8 +120,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final item = items[index];
-                // ✅ Passing Env.baseUrl here
-                return _ItemTile(item: item, baseUrl: Env.baseUrl);
+                // ✅ No need to pass baseUrl manually anymore
+                return _ItemTile(item: item);
               },
             ),
           ),
@@ -228,17 +227,14 @@ class _SectionHeader extends StatelessWidget {
 
 class _ItemTile extends StatelessWidget {
   final Map<String, dynamic> item;
-  final String baseUrl;
-
-  const _ItemTile({required this.item, required this.baseUrl});
+  
+  // ✅ Removed manual baseUrl parameter
+  const _ItemTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    String imgUrl = item['productImage']?.toString() ?? '';
-    if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
-      if (imgUrl.startsWith('/')) imgUrl = imgUrl.substring(1);
-      imgUrl = "$baseUrl$imgUrl";
-    }
+    // ✅ Use UrlHelper for clean image handling
+    final imgUrl = UrlHelper.full(item['productImage']?.toString() ?? '');
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -251,7 +247,7 @@ class _ItemTile extends StatelessWidget {
               width: 50,
               height: 50,
               color: Colors.grey[100],
-              child: imgUrl.isEmpty
+              child: item['productImage'] == null || item['productImage'] == ''
                   ? const Icon(Icons.fastfood, size: 20, color: Colors.grey)
                   : Image.network(
                       imgUrl,

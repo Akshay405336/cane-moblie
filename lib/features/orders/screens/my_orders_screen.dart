@@ -1,9 +1,9 @@
-import 'package:caneandtender/env.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/http_client.dart';
-import '../../../routes.dart'; // ✅ Added Import for Env
+import '../../../core/network/url_helper.dart'; // ✅ Added this import (Same as CartPage)
+import '../../../routes.dart';
 import '../models/order.model.dart';
 
 class MyOrdersScreen extends StatefulWidget {
@@ -93,8 +93,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
 class _ProOrderTile extends StatelessWidget {
   final Order order;
   
-  // ✅ Removed hardcoded _baseUrl string
-  
   const _ProOrderTile({required this.order});
 
   @override
@@ -108,13 +106,9 @@ class _ProOrderTile extends StatelessWidget {
       }
     } catch (_) {}
 
-    // 2. Image URL Construction
-    String imageUrl = order.firstProductImage;
-    if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      if (imageUrl.startsWith('/')) imageUrl = imageUrl.substring(1);
-      // ✅ Connected directly to Env.baseUrl
-      imageUrl = "${Env.baseUrl}$imageUrl";
-    }
+    // 2. Image URL Construction (✅ FIXED: Using UrlHelper like CartPage)
+    // This handles the base URL and slashes automatically
+    final imageUrl = UrlHelper.full(order.firstProductImage);
 
     // 3. Status Color
     final statusColor = _getStatusColor(order.status);
@@ -179,7 +173,8 @@ class _ProOrderTile extends StatelessWidget {
                         width: 60,
                         height: 60,
                         color: Colors.grey[200],
-                        child: imageUrl.isEmpty
+                        // ✅ FIXED: Using the corrected imageUrl
+                        child: order.firstProductImage.isEmpty
                             ? const Icon(Icons.fastfood, color: Colors.grey)
                             : Image.network(
                                 imageUrl,
