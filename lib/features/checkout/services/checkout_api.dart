@@ -37,10 +37,10 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* START CHECKOUT                                   */
+  /* START CHECKOUT                                    */
   /* ================================================= */
 
-  static Future<Map<String, String>> startCheckout({
+  static Future<Map<String, dynamic>> startCheckout({
     required String outletId,
     required String addressId,
   }) async {
@@ -55,11 +55,8 @@ class CheckoutApi {
         },
       );
 
-      final data = res.data['data'];
-      return {
-        'orderId': data['orderId'],
-        'paymentId': data['paymentId'],
-      };
+      // 🔥 NOTE: Backend MUST return 'razorpayOrderId', 'key', and 'amount' here
+      return res.data['data']; 
     } catch (e) {
       debugPrint('❌ Start Checkout Failed: $e');
       throw Exception('Could not initiate checkout');
@@ -67,13 +64,27 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* CONFIRM PAYMENT                                  */
+  /* CONFIRM PAYMENT                                   */
   /* ================================================= */
 
-  static Future<void> confirmPayment(String paymentId) async {
+  static Future<void> confirmPayment({
+    required String paymentId,
+    required String razorpayPaymentId,
+    required String razorpayOrderId,
+    required String razorpaySignature,
+  }) async {
     try {
       debugPrint('💳 POST /payments/$paymentId/confirm');
-      await _dio.post('/payments/$paymentId/confirm');
+      
+      await _dio.post(
+        '/payments/$paymentId/confirm',
+        data: {
+          // Required for backend verification
+          'razorpay_payment_id': razorpayPaymentId,
+          'razorpay_order_id': razorpayOrderId,
+          'razorpay_signature': razorpaySignature,
+        },
+      );
     } catch (e) {
       debugPrint('❌ Payment Failed: $e');
       throw Exception('Payment verification failed');
@@ -81,7 +92,7 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* GET ORDER                                        */
+  /* GET ORDER                                         */
   /* ================================================= */
 
   static Future<Order> getOrder(String orderId) async {

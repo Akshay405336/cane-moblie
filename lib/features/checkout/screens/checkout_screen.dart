@@ -28,7 +28,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
+    // 🔥 Initialize Razorpay Listeners
+    CheckoutController.instance.initRazorpay();
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
+  }
+
+  @override
+  void dispose() {
+    // 🔥 Clean up Razorpay Listeners
+    CheckoutController.instance.disposeRazorpay();
+    super.dispose();
   }
 
   void _initLoad() {
@@ -46,7 +56,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      isScrollControlled: true, // Allows sheet to grow if needed
+      isScrollControlled: true, 
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -59,7 +69,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Future<void> _handlePay() async {
     try {
+      // This waits for the entire Razorpay flow to complete
       final order = await CheckoutController.instance.placeOrder();
+      
       if (order != null && mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -68,9 +80,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
+      // Catch errors from Controller (User cancelled or API fail)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: $e"),
+          content: Text("Payment Failed: ${e.toString().replaceAll('Exception:', '')}"),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -81,7 +94,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Very subtle grey for contrast
+      backgroundColor: const Color(0xFFF8F9FA), 
       appBar: AppBar(
         title: const Text(
           "Review & Pay",
@@ -100,7 +113,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         valueListenable: CheckoutController.instance,
         builder: (context, summary, _) {
           
-          // 1. Loading State (Centered & Clean)
+          // 1. Loading State
           if (CheckoutController.instance.isLoading && summary == null) {
             return const Center(
               child: Column(
@@ -143,7 +156,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   grandTotal: summary.grandTotal,
                 ),
 
-                // Trust Badge / Footer Note
+                // Trust Badge
                 const SizedBox(height: 30),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -156,7 +169,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 120), // Extra space for bottom bar
+                const SizedBox(height: 120), 
               ],
             ),
           );
@@ -174,7 +187,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // --- WIDGET EXTRACT: NO ADDRESS STATE ---
   Widget _buildNoAddressState() {
     return Center(
       child: Padding(
@@ -223,7 +235,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // --- WIDGET EXTRACT: BOTTOM BAR ---
   Widget _buildBottomBar(CheckoutSummary summary) {
     final isLoading = CheckoutController.instance.isLoading;
 
@@ -243,7 +254,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            // Total Price Display
             Expanded(
               flex: 4,
               child: Column(
@@ -258,8 +268,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
             ),
-            
-            // Pay Button
             Expanded(
               flex: 6,
               child: SizedBox(
