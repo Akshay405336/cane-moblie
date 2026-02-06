@@ -78,47 +78,75 @@ class _SavedAddressesScreenState
     final ctrl = context.watch<SavedAddressController>();
 
     return Scaffold(
+      // ✅ Enhanced: Modern grey background matches other screens
+      backgroundColor: const Color(0xFFF5F6F8),
+      
+      // ✅ Enhanced: Clean White AppBar
       appBar: AppBar(
-        title: const Text('Saved Addresses'),
+        title: const Text(
+          'Saved Addresses',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
 
       /* ================================================= */
-      /* BODY                                               */
+      /* BODY                                              */
       /* ================================================= */
 
       body: Stack(
         children: [
           SafeArea(
-            child: SavedAddressList(
-              showActions: true,
+            child: Padding(
+              // ✅ Enhanced: Top spacing for better separation
+              padding: const EdgeInsets.only(top: 12),
+              child: SavedAddressList(
+                showActions: true,
 
-              /// tap → edit
-              onSelect: (addr) => _edit(addr),
+                /// tap → edit
+                onSelect: (addr) => _edit(addr),
+              ),
             ),
           ),
 
           /* ================================================= */
-          /* ⭐ LOADING OVERLAY (nice UX)                        */
+          /* ⭐ LOADING OVERLAY (nice UX)                      */
           /* ================================================= */
 
           if (ctrl.isLoading)
-            const ColoredBox(
-              color: Color(0x22000000),
-              child: Center(
-                child: CircularProgressIndicator(),
+            ColoredBox(
+              color: Colors.black.withOpacity(0.2), // ✅ Enhanced: Smoother overlay
+              child: const Center(
+                child: CircularProgressIndicator(
+                  // ✅ Enhanced: Brand Green Color
+                  color: Color(0xFF2E7D32),
+                ),
               ),
             ),
         ],
       ),
 
       /* ================================================= */
-      /* ADD BUTTON                                         */
+      /* ADD BUTTON                                        */
       /* ================================================= */
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: ctrl.isLoading ? null : _add,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Address'),
+        // ✅ Enhanced: Brand styling
+        backgroundColor: const Color(0xFF2E7D32),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Address',
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            color: Colors.white,
+            fontSize: 15,
+          ),
+        ),
+        elevation: 4,
       ),
     );
   }
