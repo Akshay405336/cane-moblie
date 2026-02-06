@@ -42,11 +42,10 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* LOAD CART (SAFE – no crash on app start)          */
+  /* LOAD CART                                        */
   /* ================================================= */
 
   Future<void> load() async {
-    // 🔥 Outlet may not be ready yet during bootstrap
     if (_outletId == null) return;
 
     try {
@@ -58,7 +57,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* ADD ITEM (🔥 FINAL FIX)                           */
+  /* ADD ITEM                                         */
   /* ================================================= */
 
   Future<void> addItem({
@@ -70,11 +69,6 @@ class CartController extends ValueNotifier<Cart> {
     try {
       _setLoading(true);
 
-      /*
-       🔥 CRITICAL FIX
-       If this is the FIRST cart action OR outlet changed,
-       backend may already have a cart → force replace.
-      */
       final shouldForceReplace =
           _outletId == null || _outletId != outletId;
 
@@ -137,7 +131,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* CLEAR (logout only)                              */
+  /* CLEAR                                            */
   /* ================================================= */
 
   void clear() {
@@ -185,4 +179,12 @@ class CartController extends ValueNotifier<Cart> {
   double get grandTotal => value.grandTotal;
   bool get isEmpty => value.items.isEmpty;
   bool get hasCart => value.items.isNotEmpty;
+
+  /* ================================================= */
+  /* OUTLET UI HELPER (🔥 REQUIRED FIX)                */
+  /* ================================================= */
+
+  bool isSameOutlet(String outletId) {
+    return _outletId == outletId;
+  }
 }
