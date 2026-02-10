@@ -8,7 +8,7 @@ class Env {
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://blanket-induction-selective-motel.trycloudflare.com';
+      : 'https://maria-gourmet-intended-martial.trycloudflare.com';
   /// App name
   static const String appName = 'Cane & Tender';
 }

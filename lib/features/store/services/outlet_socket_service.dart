@@ -8,9 +8,7 @@ class OutletSocketService {
   OutletSocketService._();
 
   static IO.Socket? _socket;
-
   static final List<void Function(List<Outlet>)> _listeners = [];
-
   static List<Outlet> _cachedOutlets = [];
 
   /* ================================================= */
@@ -58,12 +56,17 @@ class OutletSocketService {
       try {
         final List list = data['outlets'];
 
-        /// ⭐⭐⭐ IMPORTANT FIX HERE ⭐⭐⭐
         final outlets = list.map((e) {
           final wrapper = Map<String, dynamic>.from(e);
 
           final outletJson =
-              Map<String, dynamic>.from(wrapper['outlet']); // 🔥 FIX
+              Map<String, dynamic>.from(wrapper['outlet']);
+
+          final distanceKm =
+              (wrapper['distanceKm'] as num?)?.toDouble();
+
+          // 🔥 FIX: inject distanceKm into outlet json
+          outletJson['distanceKm'] = distanceKm;
 
           return Outlet.fromJson(outletJson);
         }).toList();
@@ -71,7 +74,8 @@ class OutletSocketService {
         _cachedOutlets = outlets;
 
         debugPrint(
-            '📦 SOCKET → parsed outlets (${outlets.length})');
+          '📦 SOCKET → parsed outlets (${outlets.length})',
+        );
 
         for (final l in _listeners) {
           l(outlets);
@@ -82,8 +86,6 @@ class OutletSocketService {
       }
     });
 
-    /* ================= DEBUG ================= */
-
     _socket!.onConnect((_) {
       debugPrint('✅ Outlet socket connected');
     });
@@ -92,27 +94,11 @@ class OutletSocketService {
       debugPrint('❌ Outlet socket disconnected');
     });
 
-    _socket!.onError((e) {
-      debugPrint('❌ Outlet socket error => $e');
-    });
-
-    _socket!.onConnectError((e) {
-      debugPrint('❌ Outlet socket connect error => $e');
-    });
-
-    _socket!.onReconnect((_) {
-      debugPrint('🔁 Outlet socket reconnected');
-    });
-
-    _socket!.onAny((event, data) {
-      debugPrint('📡 SOCKET EVENT → $event => $data');
-    });
-
     _socket!.connect();
   }
 
   /* ================================================= */
-  /* SUBSCRIBE                                          */
+  /* SUBSCRIBE                                         */
   /* ================================================= */
 
   static void subscribe(
@@ -122,7 +108,6 @@ class OutletSocketService {
       _listeners.add(listener);
     }
 
-    /// instantly send cached data
     if (_cachedOutlets.isNotEmpty) {
       listener(_cachedOutlets);
     }
@@ -135,12 +120,6 @@ class OutletSocketService {
   }
 
   /* ================================================= */
-  /* CACHE                                             */
-  /* ================================================= */
-
-  static List<Outlet> get cachedOutlets => _cachedOutlets;
-
-  /* ================================================= */
   /* DISCONNECT                                        */
   /* ================================================= */
 
@@ -148,7 +127,6 @@ class OutletSocketService {
     debugPrint('🔌 Outlet socket disconnect');
 
     _cachedOutlets = [];
-
     _socket?.disconnect();
     _socket?.dispose();
     _socket = null;

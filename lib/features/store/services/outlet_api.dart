@@ -11,7 +11,7 @@ class OutletApi {
   static final Dio _dio = AppHttpClient.dio;
 
   /* ================================================= */
-  /* GET NEARBY OUTLETS                                */
+  /* GET NEARBY OUTLETS (HOME PAGE)                    */
   /* ================================================= */
 
   static Future<List<Outlet>> getNearby({
@@ -44,11 +44,46 @@ class OutletApi {
           .toList();
 
       debugPrint(
-          '✅ REST outlets parsed → count=${outlets.length}');
+          '✅ REST nearby outlets → count=${outlets.length}');
 
       return outlets;
     } catch (e, s) {
       debugPrint('❌ OutletApi.getNearby → $e');
+      debugPrintStack(stackTrace: s);
+      return [];
+    }
+  }
+
+  /* ================================================= */
+  /* ⭐ GET ALL OUTLETS (STORE PAGE)                   */
+  /* ================================================= */
+
+  static Future<List<Outlet>> getAll() async {
+    try {
+      debugPrint('🏪 GET /public/outlets (ALL)');
+
+      final response = await _dio.get('/public/outlets');
+
+      final body = response.data;
+
+      if (body == null || body['data'] == null) {
+        debugPrint('⚠️ Empty outlets response');
+        return [];
+      }
+
+      final list =
+          List<Map<String, dynamic>>.from(body['data']);
+
+      final outlets = list
+          .map(Outlet.fromJson)
+          .toList();
+
+      debugPrint(
+          '✅ REST all outlets → count=${outlets.length}');
+
+      return outlets;
+    } catch (e, s) {
+      debugPrint('❌ OutletApi.getAll → $e');
       debugPrintStack(stackTrace: s);
       return [];
     }

@@ -27,25 +27,36 @@ class _StorePageState extends State<StorePage> {
     _fetchOutlets();
   }
 
-  // ⭐ Fetch Real Data
+  /* ================================================= */
+  /* FETCH ALL OUTLETS (NO LOCATION FILTER)             */
+  /* ================================================= */
+
   Future<void> _fetchOutlets() async {
-    // ⚠️ TODO: Use real user location (Geolocator) here.
-    // For now, we use Bangalore coordinates to make the API call work.
-    const double userLat = 12.9716;
-    const double userLng = 77.5946;
+    setState(() => _isLoading = true);
 
-    final data = await OutletApi.getNearby(lat: userLat, lng: userLng);
+    try {
+      // ✅ FIX: Fetch ALL outlets (not nearby)
+      final data = await OutletApi.getAll();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _outlets = data;
-      _isLoading = false;
-    });
+      setState(() {
+        _outlets = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('❌ Failed to load outlets: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _outlets = [];
+        _isLoading = false;
+      });
+    }
   }
 
   void _onOutletTap(Outlet outlet) {
-    // Navigate to Products Screen
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -63,12 +74,14 @@ class _StorePageState extends State<StorePage> {
         color: const Color(0xFF1B5E20),
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 📍 HEADER TEXT
+              /* ================= HEADER ================= */
+
               const Text(
-                'Nearby Stores',
+                'All Stores',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -79,7 +92,7 @@ class _StorePageState extends State<StorePage> {
               const SizedBox(height: 8),
 
               const Text(
-                'Find fresh juice stores near your location 🌱',
+                'Browse all available juice stores 🍹',
                 style: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF558B2F),
@@ -88,31 +101,34 @@ class _StorePageState extends State<StorePage> {
 
               const SizedBox(height: 24),
 
-              // 🏬 STORE LIST BUILDER
+              /* ================= STORE LIST ================= */
+
               if (_isLoading)
-                // Loading State
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(color: const Color(0xFF1B5E20)),
+                    child: CircularProgressIndicator(
+                      color: const Color(0xFF1B5E20),
+                    ),
                   ),
                 )
               else if (_outlets.isEmpty)
-                // Empty State
                 _buildEmptyState()
               else
-                // Real Data List
-                ..._outlets.map((outlet) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _StoreCard(
-                        outlet: outlet,
-                        onTap: () => _onOutletTap(outlet),
-                      ),
-                    )),
+                ..._outlets.map(
+                  (outlet) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _StoreCard(
+                      outlet: outlet,
+                      onTap: () => _onOutletTap(outlet),
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 24),
 
-              // FOOTER
+              /* ================= FOOTER ================= */
+
               Center(
                 child: Text(
                   'More stores coming soon 🍹',
@@ -129,16 +145,24 @@ class _StorePageState extends State<StorePage> {
     );
   }
 
+  /* ================================================= */
+  /* EMPTY STATE                                       */
+  /* ================================================= */
+
   Widget _buildEmptyState() {
     return Container(
       padding: const EdgeInsets.all(32),
       alignment: Alignment.center,
       child: Column(
         children: [
-          Icon(Icons.store_mall_directory_outlined, size: 48, color: Colors.grey[400]),
+          Icon(
+            Icons.store_mall_directory_outlined,
+            size: 48,
+            color: Colors.grey[400],
+          ),
           const SizedBox(height: 16),
           Text(
-            "No stores found nearby",
+            "No stores available",
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -147,7 +171,10 @@ class _StorePageState extends State<StorePage> {
   }
 }
 
-// ⭐ Separate Widget for cleaner code
+/* ================================================= */
+/* STORE CARD (UNCHANGED)                            */
+/* ================================================= */
+
 class _StoreCard extends StatelessWidget {
   final Outlet outlet;
   final VoidCallback onTap;
@@ -159,12 +186,12 @@ class _StoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Logic for color based on status
     final isOpen = outlet.isOpen;
 
-    // Green if Open, Red if Closed
-    final statusColor = isOpen ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
-    final statusBg = isOpen ? const Color(0xFFE8F5E9) : const Color(0xFFFCE4EC);
+    final statusColor =
+        isOpen ? const Color(0xFF2E7D32) : const Color(0xFFC62828);
+    final statusBg =
+        isOpen ? const Color(0xFFE8F5E9) : const Color(0xFFFCE4EC);
 
     return InkWell(
       onTap: onTap,
@@ -184,7 +211,6 @@ class _StoreCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // STORE ICON
             Container(
               width: 56,
               height: 56,
@@ -194,8 +220,6 @@ class _StoreCard extends StatelessWidget {
                     const Color(0xFFE8F5E9),
                     const Color(0xFFE8F5E9).withOpacity(0.8),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -208,7 +232,6 @@ class _StoreCard extends StatelessWidget {
 
             const SizedBox(width: 16),
 
-            // STORE INFO
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,11 +241,9 @@ class _StoreCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
-                      color: Colors.black87,
                     ),
                   ),
 
-                  // Show Branch if available
                   if (outlet.branch.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
@@ -233,34 +254,13 @@ class _StoreCard extends StatelessWidget {
                       ),
                     ),
                   ],
-
-                  const SizedBox(height: 8),
-
-                  // Mock Distance Logic (Since we don't calculate real distance yet)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: const Color(0xFF558B2F),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        "~ 2.5 km",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
 
-            // STATUS BADGE
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: statusBg,
                 borderRadius: BorderRadius.circular(20),
