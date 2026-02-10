@@ -35,7 +35,7 @@ class SavedAddressApi {
       return addresses;
     } catch (e) {
       debugPrint('❌ SavedAddressApi.getAll → $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
@@ -52,7 +52,7 @@ class SavedAddressApi {
       return SavedAddress.fromJson(res.data['data']);
     } catch (e) {
       debugPrint('❌ SavedAddressApi.getById → $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
@@ -71,6 +71,11 @@ class SavedAddressApi {
         data: address.toCreateJson(),
       );
 
+      // Check if backend returned success: false even with 200 OK
+      if (res.data['success'] == false) {
+        throw res.data['code'] ?? res.data['message'] ?? 'CREATE_FAILED';
+      }
+
       final created =
           SavedAddress.fromJson(res.data['data']);
 
@@ -79,7 +84,7 @@ class SavedAddressApi {
       return created;
     } catch (e) {
       debugPrint('❌ SavedAddressApi.create → $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
@@ -98,6 +103,10 @@ class SavedAddressApi {
         data: address.toUpdateJson(),
       );
 
+      if (res.data['success'] == false) {
+        throw res.data['code'] ?? res.data['message'] ?? 'UPDATE_FAILED';
+      }
+
       final updated =
           SavedAddress.fromJson(res.data['data']);
 
@@ -106,7 +115,7 @@ class SavedAddressApi {
       return updated;
     } catch (e) {
       debugPrint('❌ SavedAddressApi.update → $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
@@ -118,12 +127,33 @@ class SavedAddressApi {
     try {
       debugPrint('📡 API → DELETE $id');
 
-      await _dio.post('$_base/$id/delete');
+      final res = await _dio.post('$_base/$id/delete');
+
+      if (res.data['success'] == false) {
+        throw res.data['code'] ?? 'DELETE_FAILED';
+      }
 
       debugPrint('✅ deleted → $id');
     } catch (e) {
       debugPrint('❌ SavedAddressApi.delete → $e');
-      rethrow;
+      throw _handleError(e);
     }
+  }
+
+  /* ================================================= */
+  /* ERROR HANDLER                                     */
+  /* ================================================= */
+
+  /// ⭐ Logic to extract the specific backend error code
+  static dynamic _handleError(dynamic e) {
+    if (e is DioException) {
+      // If backend sends a response body with an error code
+      final responseData = e.response?.data;
+      if (responseData is Map && responseData.containsKey('code')) {
+        return responseData['code']; // e.g., 'SAVED_ADDRESS_TYPE_ALREADY_EXISTS'
+      }
+      return e.message ?? 'Network Error';
+    }
+    return e.toString();
   }
 }

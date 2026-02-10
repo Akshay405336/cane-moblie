@@ -33,7 +33,15 @@ class SavedAddressRepository {
 
       final list = await SavedAddressApi.getAll();
 
+      // Ensure we only cache non-deleted addresses and sort by creation/update time
       _cache = list.where((e) => !e.isDeleted).toList();
+      
+      // Sort: Newer items first (matches backend behavior)
+      _cache.sort((a, b) {
+        final dateA = a.updatedAt ?? a.createdAt ?? DateTime(0);
+        final dateB = b.updatedAt ?? b.createdAt ?? DateTime(0);
+        return dateB.compareTo(dateA);
+      });
 
       debugPrint('✅ repo.getAll → fetched ${_cache.length}');
 
@@ -76,7 +84,14 @@ class SavedAddressRepository {
       final created = await SavedAddressApi.create(address);
 
       if (!created.isDeleted) {
-        _cache = [..._cache, created];
+        // If it's HOME or WORK, remove the old one from cache first 
+        // to prevent duplicate types in the local UI list
+        if (created.type == SavedAddressType.home || created.type == SavedAddressType.work) {
+          _cache.removeWhere((e) => e.type == created.type);
+        }
+        
+        // Add to top of the list
+        _cache = [created, ..._cache];
       }
 
       debugPrint('✅ repo.create → ${created.id}');
@@ -104,6 +119,13 @@ class SavedAddressRepository {
           .map((e) => e.id == updated.id ? updated : e)
           .where((e) => !e.isDeleted)
           .toList();
+      
+      // Re-sort after update to keep UI fresh
+      _cache.sort((a, b) {
+        final dateA = a.updatedAt ?? a.createdAt ?? DateTime(0);
+        final dateB = b.updatedAt ?? b.createdAt ?? DateTime(0);
+        return dateB.compareTo(dateA);
+      });
 
       debugPrint('✅ repo.update → done');
 
@@ -131,6 +153,16 @@ class SavedAddressRepository {
       debugPrint('❌ repo.delete → $e');
       rethrow;
     }
+  }
+
+  /* ================================================= */
+  /* HELPERS                                           */
+  /* ================================================= */
+
+  /// Returns true if the user already has a saved address of this type
+  static bool hasType(SavedAddressType type) {
+    if (type == SavedAddressType.other) return false;
+    return _cache.any((e) => e.type == type);
   }
 
   /* ================================================= */

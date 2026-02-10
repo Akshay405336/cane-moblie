@@ -13,6 +13,7 @@ enum SavedAddressType {
         return SavedAddressType.home;
       case 'WORK':
         return SavedAddressType.work;
+      case 'OTHER':
       default:
         return SavedAddressType.other;
     }
@@ -44,16 +45,12 @@ enum SavedAddressType {
 class SavedAddress {
   final String id;
   final String customerId;
-
   final SavedAddressType type;
   final String label;
-  final String address;
-
-  final double? lat;
-  final double? lng;
-
+  final String address; // Mapped from addressText
+  final double? lat;     // Mapped from latitude
+  final double? lng;     // Mapped from longitude
   final bool isDeleted;
-
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -71,7 +68,7 @@ class SavedAddress {
   });
 
   /* =============================================================== */
-  /* HELPERS                                                          */
+  /* HELPERS                                                         */
   /* =============================================================== */
 
   bool get hasCoordinates => lat != null && lng != null;
@@ -102,7 +99,7 @@ class SavedAddress {
   }
 
   /* =============================================================== */
-  /* COPY                                                             */
+  /* COPY                                                            */
   /* =============================================================== */
 
   SavedAddress copyWith({
@@ -132,7 +129,7 @@ class SavedAddress {
   }
 
   /* =============================================================== */
-  /* JSON                                                             */
+  /* JSON                                                            */
   /* =============================================================== */
 
   factory SavedAddress.fromJson(Map<String, dynamic> json) {
@@ -141,16 +138,16 @@ class SavedAddress {
       customerId: json['customerId']?.toString() ?? '',
       type: SavedAddressType.fromApi(json['type'] ?? 'OTHER'),
       label: json['label'] ?? '',
-      address: json['addressText'] ?? '',
-      lat: (json['latitude'] as num?)?.toDouble(),
-      lng: (json['longitude'] as num?)?.toDouble(),
+      address: json['addressText'] ?? '', // Backend uses addressText
+      lat: (json['latitude'] as num?)?.toDouble(), // Backend uses latitude
+      lng: (json['longitude'] as num?)?.toDouble(), // Backend uses longitude
       isDeleted: json['isDeleted'] ?? false,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
   }
 
-  /// ⭐ create payload
+  /// ⭐ create payload (Exactly matches backend POST body)
   Map<String, dynamic> toCreateJson() {
     return {
       'type': type.toApi(),
@@ -161,9 +158,11 @@ class SavedAddress {
     };
   }
 
-  /// ⭐ update payload (backend safe)
+  /// ⭐ update payload (Matches backend requirements)
   Map<String, dynamic> toUpdateJson() {
     return {
+      'type': type.toApi(),
+      'label': label,
       'addressText': address,
       'latitude': lat,
       'longitude': lng,
@@ -179,4 +178,31 @@ class SavedAddress {
   String toString() {
     return 'SavedAddress($label → $address | $lat,$lng)';
   }
+}
+
+/// Helper class to handle the Backend Response Wrapper
+class AddressApiResponse {
+  final bool success;
+  final String code;
+  final String message;
+  final dynamic data;
+
+  AddressApiResponse({
+    required this.success,
+    required this.code,
+    required this.message,
+    this.data,
+  });
+
+  factory AddressApiResponse.fromJson(Map<String, dynamic> json) {
+    return AddressApiResponse(
+      success: json['success'] ?? false,
+      code: json['code'] ?? '',
+      message: json['message'] ?? '',
+      data: json['data'],
+    );
+  }
+
+  // Helper to check for the specific singleton error you received
+  bool get isDuplicateType => code == "SAVED_ADDRESS_TYPE_ALREADY_EXISTS";
 }

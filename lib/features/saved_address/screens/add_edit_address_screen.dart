@@ -89,13 +89,13 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
       final ctrl = context.read<SavedAddressController>();
       
       final model = SavedAddress(
-        id: widget.address?.id ?? '', // ID handled by backend/controller usually
+        id: widget.address?.id ?? '', 
         customerId: widget.address?.customerId ?? '',
         label: _labelCtrl.text.trim(),
-        address: _addressCtrl.text.trim(),
+        address: _addressCtrl.text.trim(), // Maps to addressText in backend
         type: _type,
-        lat: _lat!,
-        lng: _lng!,
+        lat: _lat,
+        lng: _lng,
       );
 
       if (widget.isEdit) {
@@ -109,8 +109,19 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      // Handle generic errors here
-      if (mounted) _showError('Failed to save address. Please try again.');
+      // ⭐ UPDATED: Enhanced error handling for backend constraints
+      String errorMsg = 'Failed to save address. Please try again.';
+      
+      // If your controller throws the specific backend error code
+      final errorStr = e.toString();
+      if (errorStr.contains('SAVED_ADDRESS_TYPE_ALREADY_EXISTS')) {
+        errorMsg = 'An active ${_type.displayName} address already exists.';
+      }
+
+      if (mounted) {
+        HapticFeedback.vibrate();
+        _showError(errorMsg);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -122,6 +133,8 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
         content: Text(msg),
         backgroundColor: Colors.red.shade700,
         behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -159,7 +172,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_formWasEdited,
+      canPop: !_formWasEdited || _saving, // Allow pop if not edited or currently saving (to prevent double-taps)
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final bool shouldPop = await _onWillPop();
@@ -172,8 +185,6 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
           title: Text(widget.isEdit ? 'Edit Address' : 'New Address'),
           centerTitle: true,
         ),
-        // Use Column with Expanded + SingleChildScrollView to handle Keyboard
-        // while keeping the button pinned at bottom (standard mobile pattern)
         body: SafeArea(
           child: Column(
             children: [
@@ -190,6 +201,15 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                         _buildMapPicker(),
                         const SizedBox(height: 24),
                         _buildTypeDropdown(),
+                        // Extra info note for HOME/WORK
+                        if (_type != SavedAddressType.other)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              'Note: You can only have one active ${_type.displayName} address.',
+                              style: TextStyle(fontSize: 12, color: Colors.orange.shade800, fontStyle: FontStyle.italic),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -209,7 +229,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
       textInputAction: TextInputAction.next,
       textCapitalization: TextCapitalization.words,
       decoration: const InputDecoration(
-        labelText: 'Label (e.g., Home, Office)',
+        labelText: 'Label (e.g., Friend Office, Granny Home)',
         hintText: 'Enter a name for this address',
         prefixIcon: Icon(Icons.label_outline),
         border: OutlineInputBorder(),
@@ -238,10 +258,11 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
           controller: _addressCtrl,
           lat: _lat,
           lng: _lng,
-          // Assuming your picker has decorations, otherwise wrap it
           onPicked: (lat, lng) {
-            _lat = lat;
-            _lng = lng;
+            setState(() {
+              _lat = lat;
+              _lng = lng;
+            });
             _markAsEdited();
           },
         ),
@@ -272,7 +293,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
           child: Text(e.displayName),
         );
       }).toList(),
-      onChanged: (v) {
+      onChanged: widget.isEdit ? null : (v) { // Backend constraint: usually better to let user pick type only on creation
         if (v != null) {
           setState(() => _type = v);
           _markAsEdited();
@@ -309,9 +330,9 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                   width: 24,
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 )
-              : const Text(
-                  'SAVE ADDRESS',
-                  style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
+              : Text(
+                  widget.isEdit ? 'UPDATE ADDRESS' : 'SAVE ADDRESS',
+                  style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1),
                 ),
         ),
       ),

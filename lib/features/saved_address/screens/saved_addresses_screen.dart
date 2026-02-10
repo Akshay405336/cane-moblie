@@ -40,17 +40,55 @@ class _SavedAddressesScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Addresses'),
+        actions: [
+          // Extra: Refresh button in AppBar for convenience
+          IconButton(
+            onPressed: () => ctrl.load(),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
 
       /* ================================================= */
-      /* LIST                                               */
+      /* LIST / BODY                                        */
       /* ================================================= */
 
-      body: ctrl.isEmpty && !ctrl.isLoading
-          ? _EmptyState(onAdd: _openAdd)
-          : const SavedAddressList(
-              showActions: true, // delete enabled
+      body: Stack(
+        children: [
+          // Main Content with RefreshIndicator
+          RefreshIndicator(
+            onRefresh: () => ctrl.load(),
+            child: ctrl.isEmpty && !ctrl.isLoading
+                ? _EmptyState(onAdd: _openAdd)
+                : const SavedAddressList(
+                    showActions: true, // delete enabled
+                  ),
+          ),
+
+          // Extra: Global Loading Overlay
+          if (ctrl.isLoading && ctrl.isEmpty)
+            const Center(
+              child: CircularProgressIndicator(),
             ),
+            
+          // Extra: Error indicator if fetch fails (Optional check)
+          if (ctrl.hasError && !ctrl.isLoading)
+             Center(
+               child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                   const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                   const SizedBox(height: 16),
+                   const Text('Could not load addresses'),
+                   TextButton(
+                     onPressed: () => ctrl.load(),
+                     child: const Text('Retry'),
+                   )
+                 ],
+               ),
+             ),
+        ],
+      ),
 
       /* ================================================= */
       /* ADD BUTTON                                         */
@@ -76,9 +114,11 @@ class _SavedAddressesScreenState
       ),
     );
 
-    /// ⭐ usually NOT required because controller updates cache
-    /// but keep if you want server re-sync
-    // context.read<SavedAddressController>().refresh();
+    /// ⭐ Refresh after returning to ensure UI matches backend state
+    /// specifically helpful after "SAVED_ADDRESS_CREATED"
+    if (mounted) {
+       context.read<SavedAddressController>().load();
+    }
   }
 }
 
@@ -93,27 +133,47 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.location_on_outlined,
-            size: 54,
-            color: Colors.grey,
+    return ListView( // Changed to ListView so RefreshIndicator works
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No saved addresses yet',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Add your home, work or other frequently\nused locations for quicker checkouts.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: const Text('Add your first address'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'No saved addresses yet',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onAdd,
-            child: const Text('Add your first address'),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

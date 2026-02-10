@@ -125,7 +125,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
         'amount': amount,
         'name': 'Cane & Tender',
         'description': 'Fresh Juice Order',
-        'timeout': 30, 
+        'timeout': 120, 
         'prefill': {
           'contact': '9876543210', // You can fetch user phone here
           'email': 'customer@example.com'

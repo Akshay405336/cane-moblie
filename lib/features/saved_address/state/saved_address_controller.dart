@@ -76,7 +76,6 @@ class SavedAddressController extends ChangeNotifier {
       );
 
       debugPrint('📦 RAW RESULT LENGTH => ${result.length}');
-      debugPrint('📦 RAW RESULT => $result');
 
       _addresses = result;
 
@@ -110,12 +109,27 @@ class SavedAddressController extends ChangeNotifier {
     try {
       final created = await SavedAddressRepository.create(address);
 
-      _addresses = [..._addresses, created];
+      // ⭐ SYNC LOGIC: If we created a HOME/WORK, remove the old one from the list
+      // because the backend only allows one active of each type.
+      if (created.type == SavedAddressType.home || created.type == SavedAddressType.work) {
+         _addresses = _addresses.where((e) => e.type != created.type).toList();
+      }
+
+      // Add new one to the top
+      _addresses = [created, ..._addresses];
 
       debugPrint('✅ Created → ${created.id}');
     } catch (e) {
       debugPrint('❌ Create error → $e');
-      _error = 'Unable to create address';
+      
+      // ⭐ BACKEND ERROR MAPPING
+      if (e.toString().contains('SAVED_ADDRESS_TYPE_ALREADY_EXISTS')) {
+        _error = 'An active ${address.type.displayName} address already exists';
+      } else {
+        _error = 'Unable to create address';
+      }
+      
+      rethrow; // Rethrow so the UI (AddEditScreen) can catch it and show the snackbar
     } finally {
       _stopLoading();
     }
@@ -160,6 +174,7 @@ class SavedAddressController extends ChangeNotifier {
     } catch (e) {
       debugPrint('❌ Update error → $e');
       _error = 'Unable to update address';
+      rethrow;
     } finally {
       _stopLoading();
     }
@@ -213,6 +228,12 @@ class SavedAddressController extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Helper to check if a type already exists for the UI
+  bool hasAddressType(SavedAddressType type) {
+    if (type == SavedAddressType.other) return false;
+    return _addresses.any((e) => e.type == type);
   }
 
   void clearError() {
