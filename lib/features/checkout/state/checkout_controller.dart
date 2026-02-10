@@ -13,12 +13,14 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
 
   // =========================================================
   // 🔥 YOUR RAZORPAY KEY ID
+  // We use this if the backend doesn't send a key.
   // =========================================================
   static const String _fallbackKey = "rzp_test_RbAfDB5uwpOElJ"; 
 
   late Razorpay _razorpay;
   Completer<Order?>? _checkoutCompleter;
   
+  // Track session IDs
   String? _currentInternalOrderId;
   String? _currentInternalPaymentId;
 
@@ -88,7 +90,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
   }
 
   /* ================================================= */
-  /* 🔥 PLACE ORDER (Corrected Error Handling)         */
+  /* 🔥 PLACE ORDER (With Fallback Logic)              */
   /* ================================================= */
 
   Future<Order?> placeOrder() async {
@@ -110,8 +112,12 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
       _currentInternalOrderId = data['orderId'];
       _currentInternalPaymentId = data['paymentId'];
 
-      // 2. Prepare Data
+      // 2. Prepare Data (Handle missing backend fields)
+      
+      // A. Key: Use backend key if available, else use your hardcoded key
       String rzpKey = data['key'] ?? _fallbackKey;
+      
+      // B. Amount: Use backend amount, else calculate (GrandTotal * 100 paise)
       int amount = data['amount'] ?? (value!.grandTotal * 100).toInt();
 
       var options = {
@@ -119,17 +125,19 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
         'amount': amount,
         'name': 'Cane & Tender',
         'description': 'Fresh Juice Order',
-        'timeout': 300, 
+        'timeout': 30, 
         'prefill': {
-          'contact': '9876543210', 
+          'contact': '9876543210', // You can fetch user phone here
           'email': 'customer@example.com'
         }
       };
 
+      // C. Order ID: Only add if backend sent it. 
+      // If missing, Razorpay runs in "Standard Mode" (works for testing).
       if (data['razorpayOrderId'] != null && data['razorpayOrderId'].toString().isNotEmpty) {
         options['order_id'] = data['razorpayOrderId'];
       } else {
-        debugPrint("⚠️ WARNING: No Razorpay Order ID from server.");
+        debugPrint("⚠️ WARNING: No Razorpay Order ID from server. Running in Standard Mode.");
       }
 
       // 3. Open UI
@@ -140,16 +148,9 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
 
     } catch (e) {
       _setLoading(false);
-      
-      // 🔥 FIX: Extract the actual error message from the exception
-      // If it's a DioError, we get the backend's "One order is pending" message
-      String rawError = e.toString().replaceAll('Exception:', '').trim();
-      
-      _error = rawError; 
+      _error = "Could not initiate payment. Please try again.";
       debugPrint("❌ Place Order Error: $e");
-      
-      // We rethrow so the UI (CheckoutScreen) can catch it and show the SnackBar/Dialog
-      rethrow; 
+      rethrow;
     }
   }
 
@@ -165,20 +166,25 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
         throw Exception("Session state lost. Please check My Orders.");
       }
 
+      // 5. Verify with Backend
       await CheckoutApi.confirmPayment(
         paymentId: _currentInternalPaymentId!,
         razorpayPaymentId: response.paymentId!,
+        // Handle nulls if running in Standard Mode (no order ID)
         razorpayOrderId: response.orderId ?? "", 
         razorpaySignature: response.signature ?? "",
       );
 
+      // 6. Refresh Cart
       await CartController.instance.load();
       
+      // 7. Get Final Order
       if (_currentInternalOrderId != null) {
-          final order = await CheckoutApi.getOrder(_currentInternalOrderId!);
-          _checkoutCompleter?.complete(order);
+         final order = await CheckoutApi.getOrder(_currentInternalOrderId!);
+         _checkoutCompleter?.complete(order);
       } else {
-          _checkoutCompleter?.complete(null); 
+         // Fallback if ID missing
+         _checkoutCompleter?.complete(null); 
       }
 
       _setLoading(false);
@@ -195,6 +201,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
     debugPrint("❌ Razorpay Error: ${response.code} - ${response.message}");
     _setLoading(false);
     
+    // Friendly error messages
     String msg = "Payment Failed";
     if (response.code == Razorpay.PAYMENT_CANCELLED) {
       msg = "Payment Cancelled";

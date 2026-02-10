@@ -80,42 +80,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
-      String errorMessage = e.toString().replaceAll('Exception:', '').trim();
-      
-      // Check for the specific "Pending" error from backend
-      bool isPendingError = errorMessage.toLowerCase().contains('pending') || 
-                            errorMessage.toLowerCase().contains('active order');
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
-              children: [
-                Icon(isPendingError ? Icons.timer_outlined : Icons.error_outline, 
-                     color: isPendingError ? Colors.orange : Colors.redAccent),
-                const SizedBox(width: 10),
-                Text(isPendingError ? "Order Pending" : "Payment Failed"),
-              ],
-            ),
-            content: Text(
-              isPendingError 
-              ? "You already have an active order. Please wait a few minutes until your current order is delivered before placing a new one."
-              : errorMessage,
-              style: const TextStyle(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold, color: HomeColors.primaryGreen)),
-              ),
-            ],
-          ),
-        );
-      }
+      // Catch errors from Controller (User cancelled or API fail)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Payment Failed: ${e.toString().replaceAll('Exception:', '')}"),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
