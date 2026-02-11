@@ -12,7 +12,7 @@ class CartController extends ValueNotifier<Cart> {
   String? _outletId;
 
   bool get isLoading => _loading;
-  String? get currentOutletId => _outletId; // Added getter
+  String? get currentOutletId => _outletId; 
 
   /* ================================================= */
   /* OUTLET CONTEXT                                   */
@@ -37,12 +37,34 @@ class CartController extends ValueNotifier<Cart> {
     notifyListeners();
   }
 
-  void _setCart(Cart? cart) {
-    value = cart ?? Cart.empty();
+  /// ⭐ Logic Fixed: Sorts the incoming list to match the current local order
+  void _setCart(Cart? newCart) {
+    if (newCart == null) {
+      value = Cart.empty();
+      return;
+    }
+
+    // If we already have items locally, we sort the new list to match the old order
+    if (value.items.isNotEmpty && newCart.items.isNotEmpty) {
+      // Create a map of the current positions for quick lookup
+      final Map<String, int> currentOrder = {
+        for (int i = 0; i < value.items.length; i++) value.items[i].productId: i
+      };
+
+      // Sort the incoming items list based on the current existing order
+      // Items not in the current list will be placed at the end
+      newCart.items.sort((a, b) {
+        final indexA = currentOrder[a.productId] ?? 999;
+        final indexB = currentOrder[b.productId] ?? 999;
+        return indexA.compareTo(indexB);
+      });
+    }
+
+    value = newCart;
   }
 
   /* ================================================= */
-  /* LOAD CART                                        */
+  /* LOAD CART                                         */
   /* ================================================= */
 
   Future<void> load() async {
@@ -57,7 +79,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* ADD ITEM                                         */
+  /* ADD ITEM                                          */
   /* ================================================= */
 
   Future<void> addItem({
@@ -86,7 +108,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* UPDATE QTY                                       */
+  /* UPDATE QTY                                        */
   /* ================================================= */
 
   Future<void> updateQty(String productId, int qty) async {
@@ -113,7 +135,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* REMOVE ITEM                                      */
+  /* REMOVE ITEM                                       */
   /* ================================================= */
 
   Future<void> remove(String productId) async {
@@ -131,10 +153,9 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* CLEAR                                            */
+  /* CLEAR                                             */
   /* ================================================= */
 
-  /// ⭐ Updated: Fully resets cart for fresh start
   void clear() {
     value = Cart.empty();
     _outletId = null;
@@ -173,7 +194,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* HELPERS                                          */
+  /* HELPERS                                           */
   /* ================================================= */
 
   List<CartItem> get items => List.unmodifiable(value.items);
