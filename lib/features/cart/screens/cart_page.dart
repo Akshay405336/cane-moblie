@@ -1,6 +1,8 @@
+import 'package:caneandtender/features/saved_address/state/saved_address_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import '../../saved_address/screens/add_edit_address_screen.dart';
 
 import '../state/cart_controller.dart';
 import '../state/local_cart_controller.dart';
@@ -377,46 +379,324 @@ class _CheckoutBottomBar extends StatelessWidget {
   }
 
   /// ⭐ Logic: Pop-up to select address
-  Future<void> _showAddressSelection(BuildContext context) async {
-    // Return the result of AuthRequiredAction.run to satisfy the Future<void> return type
-    return AuthRequiredAction.run(
-      context,
-      action: () async {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          builder: (ctx) => Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Select Delivery Address",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+ Future<void> _showAddressSelection(BuildContext context) async {
+  return AuthRequiredAction.run(
+    context,
+    action: () async {
+      final addressCtrl =
+          Provider.of<SavedAddressController>(context, listen: false);
+
+      await addressCtrl.load(forceRefresh: true);
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFFF8F9FA),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (ctx) {
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.8,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (_, scrollController) {
+              return Column(
+                children: [
+
+                  /// 🔥 DRAG HANDLE
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: SavedAddressList(
-                    onSelect: (address) {
-                      Navigator.pop(ctx);
-                      _verifyProximityAndProceed(context, address.toLocationData());
-                    },
+
+                  const SizedBox(height: 20),
+
+                  /// HEADER
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.location_on_rounded,
+                            color: Colors.black87),
+                        SizedBox(width: 8),
+                        Text(
+                          "Select Delivery Address",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+
+                  const SizedBox(height: 20),
+
+                  /// ADDRESS LIST
+                  Expanded(
+                    child: AnimatedBuilder(
+                      animation: addressCtrl,
+                      builder: (_, __) {
+                        if (addressCtrl.isLoading) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        if (addressCtrl.addresses.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.location_off,
+                                    size: 60,
+                                    color: Colors.grey.shade400),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  "No saved addresses yet",
+                                  style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20),
+                          itemCount:
+                              addressCtrl.addresses.length,
+                          itemBuilder: (context, index) {
+                            final address =
+                                addressCtrl.addresses[index];
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _verifyProximityAndProceed(
+                                  context,
+                                  address.toLocationData(),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(
+                                    bottom: 14),
+                                padding:
+                                    const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                          18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withOpacity(0.05),
+                                      blurRadius: 15,
+                                      offset:
+                                          const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment
+                                          .start,
+                                  children: [
+
+                                    /// ICON
+                                    Container(
+                                      padding:
+                                          const EdgeInsets
+                                              .all(10),
+                                      decoration:
+                                          BoxDecoration(
+                                        color: Colors
+                                            .green.shade50,
+                                        shape:
+                                            BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on,
+                                        color: Colors.green,
+                                        size: 20,
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 14),
+
+                                    /// TEXT CONTENT
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment
+                                                .start,
+                                        children: [
+
+                                          /// LABEL + TYPE BADGE
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  address
+                                                      .label,
+                                                  style:
+                                                      const TextStyle(
+                                                    fontSize:
+                                                        15,
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w600,
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal:
+                                                        8,
+                                                    vertical:
+                                                        4),
+                                                decoration:
+                                                    BoxDecoration(
+                                                  color: Colors
+                                                      .grey
+                                                      .shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          20),
+                                                ),
+                                                child: Text(
+                                                  address
+                                                      .type
+                                                      .displayName,
+                                                  style:
+                                                      const TextStyle(
+                                                    fontSize:
+                                                        11,
+                                                    fontWeight:
+                                                        FontWeight
+                                                            .w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(
+                                              height: 6),
+
+                                          Text(
+                                            address.address,
+                                            style: TextStyle(
+                                              color: Colors
+                                                  .grey
+                                                  .shade600,
+                                              fontSize: 13,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    /// EDIT BUTTON
+                                    IconButton(
+                                      icon: const Icon(
+                                          Icons.edit_outlined,
+                                          size: 20),
+                                      onPressed: () async {
+                                        Navigator.pop(
+                                            ctx);
+
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                AddEditAddressScreen(
+                                              address:
+                                                  address,
+                                            ),
+                                          ),
+                                        );
+
+                                        addressCtrl.load(
+                                            forceRefresh:
+                                                true);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
+                  /// ADD NEW ADDRESS BUTTON
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        20, 10, 20, 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text(
+                          "Add New Address",
+                          style: TextStyle(
+                              fontWeight:
+                                  FontWeight.w600),
+                        ),
+                        style:
+                            ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor:
+                              Colors.green,
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(
+                                    14),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const AddEditAddressScreen(),
+                            ),
+                          );
+
+                          addressCtrl.load(
+                              forceRefresh: true);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    },
+  );
+}
 
   /// ⭐ Logic: Verify if address is near current outlet
   Future<void> _verifyProximityAndProceed(
