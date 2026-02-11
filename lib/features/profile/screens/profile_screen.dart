@@ -74,10 +74,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ---------------- PAYMENTS ----------------
               _ProfileTile(
-                icon: Icons.payment_outlined,
-                title: 'Payment Methods',
-                onTap: () => AppToast.info('Payments managed by Razorpay'),
-              ),
+  icon: Icons.payment_outlined,
+  title: 'Payment Methods',
+  // ⭐ UPDATED: Now navigates to the new screen instead of just showing a toast
+  onTap: () => Navigator.pushNamed(context, AppRoutes.paymentMethods),
+),
 
               const SizedBox(height: 24),
               const Text("Settings", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),

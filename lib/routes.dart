@@ -10,6 +10,7 @@ import 'features/shell/app_layout.dart';
 
 import 'features/profile/screens/profile_screen.dart';
 import 'features/profile/screens/saved_addresses_screen.dart';
+import 'features/profile/screens/payment_methods_screen.dart'; // ⭐ ADDED IMPORT
 
 /* ================= SAVED ADDRESS ================= */
 
@@ -22,7 +23,7 @@ import 'features/checkout/screens/checkout_screen.dart';
 /* ================= ORDERS ================= */
 
 import 'features/orders/screens/order_details_screen.dart';
-import 'features/orders/screens/my_orders_screen.dart'; // <--- ADDED IMPORT
+import 'features/orders/screens/my_orders_screen.dart'; 
 
 class AppRoutes {
   /* ================================================= */
@@ -37,6 +38,7 @@ class AppRoutes {
   // 👤 PROFILE
   static const profile = '/profile';
   static const savedAddresses = '/saved-addresses';
+  static const paymentMethods = '/payment-methods'; // ⭐ ADDED ROUTE NAME
 
   // 📍 ADDRESS
   static const addAddress = '/add-address';
@@ -45,7 +47,7 @@ class AppRoutes {
   static const checkout = '/checkout';
 
   // 📦 ORDERS
-  static const myOrders = '/my-orders';        // <--- ADDED ROUTE NAME
+  static const myOrders = '/my-orders';        
   static const orderDetails = '/order-details';
 
   /* ================================================= */
@@ -63,6 +65,7 @@ class AppRoutes {
     // 👤 PROFILE
     profile: (_) => const ProfileScreen(),
     savedAddresses: (_) => const SavedAddressesScreen(),
+    paymentMethods: (_) => const PaymentMethodsScreen(), // ⭐ ADDED ROUTE BUILDER
 
     // 📍 ADDRESS
     addAddress: (_) => const AddEditAddressScreen(),
@@ -71,7 +74,7 @@ class AppRoutes {
     checkout: (_) => const CheckoutScreen(),
 
     // 📦 ORDERS
-    myOrders: (_) => const MyOrdersScreen(),     // <--- ADDED ROUTE BUILDER
+    myOrders: (_) => const MyOrdersScreen(),     
     orderDetails: (_) => const OrderDetailsScreen(),
   };
 }

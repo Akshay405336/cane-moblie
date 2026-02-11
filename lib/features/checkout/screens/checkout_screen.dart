@@ -28,22 +28,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    // 🔥 Initialize Razorpay Listeners
     CheckoutController.instance.initRazorpay();
-    
     WidgetsBinding.instance.addPostFrameCallback((_) => _initLoad());
   }
 
   @override
   void dispose() {
-    // 🔥 Clean up Razorpay Listeners
     CheckoutController.instance.disposeRazorpay();
     super.dispose();
   }
 
   void _initLoad() {
-    final locationCtrl = Provider.of<LocationController>(context, listen: false);
-    final addressId = widget.initialAddressId ?? locationCtrl.current?.savedAddressId;
+    final locationCtrl =
+        Provider.of<LocationController>(context, listen: false);
+    final addressId =
+        widget.initialAddressId ?? locationCtrl.current?.savedAddressId;
 
     if (addressId != null && addressId.isNotEmpty) {
       CheckoutController.instance.loadSummary(addressId);
@@ -56,34 +55,50 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: const AddressSelectorSheet(),
       ),
     );
   }
 
+  /* ===================================================== */
+  /* 🔥 UPDATED PAY HANDLER WITH PENDING ORDER POPUP       */
+  /* ===================================================== */
+
   Future<void> _handlePay() async {
     try {
-      // This waits for the entire Razorpay flow to complete
       final order = await CheckoutController.instance.placeOrder();
-      
+
+      // 🔥 If pending order detected → Show popup
+      if (CheckoutController.instance.hasPendingOrder && mounted) {
+        _showPendingOrderDialog(
+            CheckoutController.instance.error ??
+                "You already have a pending order.");
+        return;
+      }
+
+      // 🔥 If payment completed successfully
       if (order != null && mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => OrderSuccessScreen(order: order)),
+          MaterialPageRoute(
+              builder: (_) => OrderSuccessScreen(order: order)),
           (route) => route.isFirst,
         );
       }
     } catch (e) {
-      // Catch errors from Controller (User cancelled or API fail)
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Payment Failed: ${e.toString().replaceAll('Exception:', '')}"),
+          content: Text(
+              "Payment Failed: ${e.toString().replaceAll('Exception:', '')}"),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -91,14 +106,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  /* ===================================================== */
+  /* 🔥 Pending Order Dialog                               */
+  /* ===================================================== */
+
+  void _showPendingOrderDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: const [
+            Icon(Icons.info_outline, color: Colors.orange),
+            SizedBox(width: 8),
+            Text("Pending Order"),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), 
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text(
           "Review & Pay",
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+          style: TextStyle(
+              fontWeight: FontWeight.w700, fontSize: 18),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -106,81 +155,83 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         foregroundColor: Colors.black87,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: Colors.grey.shade200, height: 1),
+          child: Container(
+              color: Colors.grey.shade200, height: 1),
         ),
       ),
       body: ValueListenableBuilder<CheckoutSummary?>(
         valueListenable: CheckoutController.instance,
         builder: (context, summary, _) {
-          
-          // 1. Loading State
-          if (CheckoutController.instance.isLoading && summary == null) {
+          if (CheckoutController.instance.isLoading &&
+              summary == null) {
             return const Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(strokeWidth: 2.5, color: HomeColors.primaryGreen),
+                  CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: HomeColors.primaryGreen),
                   SizedBox(height: 16),
-                  Text("Preparing checkout...", style: TextStyle(color: Colors.grey)),
+                  Text("Preparing checkout...",
+                      style:
+                          TextStyle(color: Colors.grey)),
                 ],
               ),
             );
           }
 
-          // 2. Empty/No Address State
           if (summary == null) {
             return _buildNoAddressState();
           }
 
-          // 3. MAIN CONTENT
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 20),
             child: Column(
               children: [
-                // Step 1: Address
                 CheckoutAddressCard(
                   addressText: summary.addressText,
                   onTap: _showAddressPicker,
                 ),
                 const SizedBox(height: 20),
-
-                // Step 2: Items
                 CheckoutItemList(items: summary.items),
                 const SizedBox(height: 20),
-
-                // Step 3: Bill
                 CheckoutBillSummary(
                   subtotal: summary.subtotal,
                   deliveryFee: summary.deliveryFee,
                   discount: summary.discount,
                   grandTotal: summary.grandTotal,
                 ),
-
-                // Trust Badge
                 const SizedBox(height: 30),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shield_outlined, size: 16, color: Colors.grey.shade500),
+                    Icon(Icons.shield_outlined,
+                        size: 16,
+                        color: Colors.grey.shade500),
                     const SizedBox(width: 8),
                     Text(
                       "Payments are 100% Secure & Encrypted",
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500),
                     ),
                   ],
                 ),
-                const SizedBox(height: 120), 
+                const SizedBox(height: 120),
               ],
             ),
           );
         },
       ),
-
-      // 4. STICKY FOOTER
-      bottomNavigationBar: ValueListenableBuilder<CheckoutSummary?>(
+      bottomNavigationBar:
+          ValueListenableBuilder<CheckoutSummary?>(
         valueListenable: CheckoutController.instance,
         builder: (context, summary, _) {
-          if (summary == null) return const SizedBox.shrink();
+          if (summary == null)
+            return const SizedBox.shrink();
           return _buildBottomBar(summary);
         },
       ),
@@ -192,7 +243,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       child: Padding(
         padding: const EdgeInsets.all(32.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+              MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(24),
@@ -200,12 +252,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.location_disabled_rounded, size: 48, color: Colors.grey.shade400),
+              child: Icon(
+                  Icons.location_disabled_rounded,
+                  size: 48,
+                  color: Colors.grey.shade400),
             ),
             const SizedBox(height: 24),
             const Text(
               "Missing Delivery Location",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -219,12 +277,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               height: 50,
               child: ElevatedButton.icon(
                 onPressed: _showAddressPicker,
-                icon: const Icon(Icons.add_location_alt_outlined),
+                icon: const Icon(
+                    Icons.add_location_alt_outlined),
                 label: const Text("Select Address"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: HomeColors.primaryGreen,
+                  backgroundColor:
+                      HomeColors.primaryGreen,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(12)),
                   elevation: 0,
                 ),
               ),
@@ -236,10 +298,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildBottomBar(CheckoutSummary summary) {
-    final isLoading = CheckoutController.instance.isLoading;
+    final isLoading =
+        CheckoutController.instance.isLoading;
 
     return Container(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24),
+      padding: const EdgeInsets.only(
+          left: 16, right: 16, top: 16, bottom: 24),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -249,7 +313,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             offset: const Offset(0, -5),
           )
         ],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(20)),
       ),
       child: SafeArea(
         child: Row(
@@ -258,12 +323,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               flex: 4,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
-                  const Text("Total Payable", style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                  const Text("Total Payable",
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight:
+                              FontWeight.w600)),
                   Text(
                     "₹${summary.grandTotal.toStringAsFixed(0)}",
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.black87),
+                    style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87),
                   ),
                 ],
               ),
@@ -273,29 +347,49 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : _handlePay,
+                  onPressed:
+                      isLoading ? null : _handlePay,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HomeColors.primaryGreen,
+                    backgroundColor:
+                        HomeColors.primaryGreen,
                     foregroundColor: Colors.white,
                     elevation: isLoading ? 0 : 4,
-                    shadowColor: HomeColors.primaryGreen.withOpacity(0.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shadowColor:
+                        HomeColors.primaryGreen
+                            .withOpacity(0.4),
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(
+                                14)),
                   ),
                   child: isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          child:
+                              CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5),
                         )
                       : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment:
+                              MainAxisAlignment
+                                  .center,
                           children: [
                             Text(
                               "PLACE ORDER",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight:
+                                      FontWeight.w700,
+                                  letterSpacing:
+                                      0.5),
                             ),
                             SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 20),
+                            Icon(
+                                Icons
+                                    .arrow_forward_rounded,
+                                size: 20),
                           ],
                         ),
                 ),

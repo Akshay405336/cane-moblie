@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
+
 import '../../../core/network/http_client.dart';
 import '../models/checkout_summary.model.dart';
 import '../../orders/models/order.model.dart';
@@ -37,7 +39,7 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* START CHECKOUT                                    */
+  /* START CHECKOUT (🔥 PROPER ERROR PROPAGATION)      */
   /* ================================================= */
 
   static Future<Map<String, dynamic>> startCheckout({
@@ -55,11 +57,28 @@ class CheckoutApi {
         },
       );
 
-      // 🔥 NOTE: Backend MUST return 'razorpayOrderId', 'key', and 'amount' here
-      return res.data['data']; 
-    } catch (e) {
+      return res.data['data'];
+
+    } on DioException catch (e) {
       debugPrint('❌ Start Checkout Failed: $e');
-      throw Exception('Could not initiate checkout');
+
+      // 🔥 If backend sends 400 (pending order or business rule)
+      if (e.response?.statusCode == 400) {
+        final message =
+            e.response?.data?['message'] ??
+            "You already have a pending order.";
+        throw Exception(message);
+      }
+
+      // 🔥 Other server errors
+      if (e.response?.statusCode == 500) {
+        throw Exception("Server error. Please try again later.");
+      }
+
+      throw Exception("Could not initiate checkout");
+    } catch (e) {
+      debugPrint('❌ Start Checkout Unexpected Error: $e');
+      throw Exception("Could not initiate checkout");
     }
   }
 
@@ -79,7 +98,6 @@ class CheckoutApi {
       await _dio.post(
         '/payments/$paymentId/confirm',
         data: {
-          // Required for backend verification
           'razorpay_payment_id': razorpayPaymentId,
           'razorpay_order_id': razorpayOrderId,
           'razorpay_signature': razorpaySignature,
