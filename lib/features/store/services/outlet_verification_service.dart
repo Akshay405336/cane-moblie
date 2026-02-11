@@ -1,6 +1,5 @@
 import 'package:geolocator/geolocator.dart';
 import '../../location/models/location.model.dart';
-import '../models/outlet.model.dart';
 
 class OutletVerificationService {
   /// Maximum delivery distance in Kilometers
