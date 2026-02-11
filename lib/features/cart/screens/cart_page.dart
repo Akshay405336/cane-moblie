@@ -8,9 +8,14 @@ import '../models/cart_item.model.dart';
 
 import '../../auth/state/auth_controller.dart';
 import '../../location/state/location_controller.dart';
+import '../../location/models/location.model.dart'; // ⭐ Added for LocationData
 import '../../checkout/screens/checkout_screen.dart';
+import '../../saved_address/widgets/saved_address_list.dart'; // ⭐ Added for Pop-up
+import '../../store/services/outlet_socket_service.dart'; // ⭐ Added for Outlet Data
+import '../../store/services/outlet_verification_service.dart'; // ⭐ Added for Range Check
 import '../../../utils/auth_required_action.dart';
 import '../../../core/network/url_helper.dart';
+import '../../../routes.dart'; // ⭐ Added for Navigation
 
 // ⭐ CHANGED: Converted to StatefulWidget to allow initialization logic
 class CartPage extends StatefulWidget {
@@ -124,7 +129,7 @@ class _CartPageState extends State<CartPage> {
 }
 
 // ---------------------------------------------------------------------------
-// ENHANCED UI WIDGETS (Unchanged)
+// UI WIDGETS
 // ---------------------------------------------------------------------------
 
 class _CartCard extends StatelessWidget {
@@ -175,11 +180,8 @@ class _CartCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Product Image
                 _CartImage(path: item.image),
                 const SizedBox(width: 16),
-
-                // Product Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,6 +301,10 @@ class _TapIcon extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// CHECKOUT BAR (VERIFICATION LOGIC INSIDE)
+// ---------------------------------------------------------------------------
+
 class _CheckoutBottomBar extends StatelessWidget {
   final int itemCount;
   final double grandTotal;
@@ -350,7 +356,7 @@ class _CheckoutBottomBar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                onPressed: loading ? null : () => _processCheckout(context),
+                onPressed: loading ? null : () => _showAddressSelection(context),
                 child: loading
                     ? const SizedBox(
                         height: 20,
@@ -370,38 +376,130 @@ class _CheckoutBottomBar extends StatelessWidget {
     );
   }
 
-  Future<void> _processCheckout(BuildContext context) async {
-    await AuthRequiredAction.run(
+  /// ⭐ Logic: Pop-up to select address
+  Future<void> _showAddressSelection(BuildContext context) async {
+    // Return the result of AuthRequiredAction.run to satisfy the Future<void> return type
+    return AuthRequiredAction.run(
       context,
       action: () async {
-        try {
-          final locationCtrl =
-              Provider.of<LocationController>(context, listen: false);
-          final currentLoc = locationCtrl.current;
-          final addressId = currentLoc?.savedAddressId;
-
-          if (addressId != null && addressId.isNotEmpty) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => CheckoutScreen(initialAddressId: addressId)),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text("Please select a delivery address first.")),
-            );
-          }
-        } catch (e) {
-          debugPrint("Location Error: $e");
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Could not verify location.")),
-          );
-        }
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.white,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (ctx) => Container(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Select Delivery Address",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: SavedAddressList(
+                    onSelect: (address) {
+                      Navigator.pop(ctx);
+                      _verifyProximityAndProceed(context, address.toLocationData());
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
+
+  /// ⭐ Logic: Verify if address is near current outlet
+  Future<void> _verifyProximityAndProceed(
+      BuildContext context, LocationData selectedAddress) async {
+    try {
+      final outletSocket = OutletSocketService.instance;
+      final currentOutletId = CartController.instance.currentOutletId;
+
+      if (outletSocket.cachedOutlets.isEmpty) {
+        throw "Outlet data not available. Please wait.";
+      }
+
+      final currentOutlet = outletSocket.cachedOutlets.firstWhere(
+        (o) => o.id == currentOutletId,
+        orElse: () => outletSocket.cachedOutlets.first,
+      );
+
+      // Verify latitude/longitude mapping from your updated Outlet Model
+      bool isNear = OutletVerificationService.isWithinRange(
+        address: selectedAddress,
+        currentOutletLat: currentOutlet.latitude.toString(),
+        currentOutletLng: currentOutlet.longitude.toString(),
+      );
+
+      if (isNear) {
+        final locCtrl = Provider.of<LocationController>(context, listen: false);
+        await locCtrl.setSaved(selectedAddress);
+        
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CheckoutScreen(initialAddressId: selectedAddress.savedAddressId!),
+          ),
+        );
+      } else {
+        _showFarOutletDialog(context, selectedAddress);
+      }
+    } catch (e) {
+      debugPrint("Verification Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  /// ⭐ Logic: Show alert for distant outlet
+  void _showFarOutletDialog(BuildContext context, LocationData address) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Outlet is Far Away"),
+        content: const Text(
+            "This outlet is too far from your selected address. We need to clear your cart so you can switch to a closer outlet."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              
+              // 1. Clear Cart
+              CartController.instance.clear();
+              
+              // 2. Set new address globally
+              final locCtrl = Provider.of<LocationController>(context, listen: false);
+              await locCtrl.setSaved(address);
+              
+              // 3. Redirect Home
+              Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
+            },
+            child: const Text("Clear Cart & Go Home"),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+// ---------------------------------------------------------------------------
+// REMAINING WIDGETS
+// ---------------------------------------------------------------------------
 
 class _CartImage extends StatelessWidget {
   final String path;

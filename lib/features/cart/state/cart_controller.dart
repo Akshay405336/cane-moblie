@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../models/cart.model.dart';
 import '../models/cart_item.model.dart';
 import '../services/cart_api.dart';
@@ -13,6 +12,7 @@ class CartController extends ValueNotifier<Cart> {
   String? _outletId;
 
   bool get isLoading => _loading;
+  String? get currentOutletId => _outletId; // Added getter
 
   /* ================================================= */
   /* OUTLET CONTEXT                                   */
@@ -134,9 +134,11 @@ class CartController extends ValueNotifier<Cart> {
   /* CLEAR                                            */
   /* ================================================= */
 
+  /// ⭐ Updated: Fully resets cart for fresh start
   void clear() {
     value = Cart.empty();
     _outletId = null;
+    notifyListeners();
   }
 
   /* ================================================= */
@@ -181,7 +183,7 @@ class CartController extends ValueNotifier<Cart> {
   bool get hasCart => value.items.isNotEmpty;
 
   /* ================================================= */
-  /* OUTLET UI HELPER (🔥 REQUIRED FIX)                */
+  /* OUTLET UI HELPER                                 */
   /* ================================================= */
 
   bool isSameOutlet(String outletId) {

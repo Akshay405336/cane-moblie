@@ -42,6 +42,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        // Added iconTheme to make the back arrow black
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: ValueListenableBuilder<ProfileModel?>(
         valueListenable: ProfileController.instance,
@@ -293,7 +295,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                 ),
                 child: _saving 
                   ? const CircularProgressIndicator(color: Colors.white) 
-                  : const Text("SAVE CHANGES", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  : const Text("SAVE CHANGES", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ],
@@ -311,10 +313,6 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     );
   }
 }
-
-// =======================================================
-// REUSABLE TILE (Unchanged)
-// =======================================================
 
 class _ProfileTile extends StatelessWidget {
   final IconData icon;

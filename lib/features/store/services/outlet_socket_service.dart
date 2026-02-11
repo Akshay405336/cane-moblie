@@ -5,17 +5,28 @@ import '../../../env.dart';
 import '../models/outlet.model.dart';
 
 class OutletSocketService {
+  /* ================================================= */
+  /* ⭐ SINGLETON INSTANCE                              */
+  /* ================================================= */
+  
+  // Private constructor
   OutletSocketService._();
+  
+  // Static final instance for global access
+  static final OutletSocketService instance = OutletSocketService._();
 
-  static IO.Socket? _socket;
-  static final List<void Function(List<Outlet>)> _listeners = [];
-  static List<Outlet> _cachedOutlets = [];
+  IO.Socket? _socket;
+  final List<void Function(List<Outlet>)> _listeners = [];
+  List<Outlet> _cachedOutlets = [];
+
+  // Getter to safely access cached outlets from CartPage or other controllers
+  List<Outlet> get cachedOutlets => List.unmodifiable(_cachedOutlets);
 
   /* ================================================= */
   /* CONNECT                                           */
   /* ================================================= */
 
-  static void connect({
+  void connect({
     required double lat,
     required double lng,
   }) {
@@ -90,6 +101,8 @@ class OutletSocketService {
       debugPrint('✅ Outlet socket connected');
     });
 
+    _socket!.onConnectError((err) => debugPrint('❌ Socket Connect Error: $err'));
+
     _socket!.onDisconnect((_) {
       debugPrint('❌ Outlet socket disconnected');
     });
@@ -101,7 +114,7 @@ class OutletSocketService {
   /* SUBSCRIBE                                         */
   /* ================================================= */
 
-  static void subscribe(
+  void subscribe(
     void Function(List<Outlet>) listener,
   ) {
     if (!_listeners.contains(listener)) {
@@ -113,7 +126,7 @@ class OutletSocketService {
     }
   }
 
-  static void unsubscribe(
+  void unsubscribe(
     void Function(List<Outlet>) listener,
   ) {
     _listeners.remove(listener);
@@ -123,7 +136,7 @@ class OutletSocketService {
   /* DISCONNECT                                        */
   /* ================================================= */
 
-  static void disconnect() {
+  void disconnect() {
     debugPrint('🔌 Outlet socket disconnect');
 
     _cachedOutlets = [];

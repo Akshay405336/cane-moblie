@@ -13,7 +13,6 @@ import '../sections/home_search.section.dart';
 import '../sections/home_categories.section.dart';
 import '../sections/home_outlets.section.dart';
 import '../widgets/home_banner_slider.section.dart';
-// ⭐ Corrected Import
 import '../widgets/home_top_banner.dart'; 
 
 import '../theme/home_colors.dart';
@@ -54,14 +53,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     CategorySocketService.connect();
-    OutletSocketService.subscribe(_onOutlets);
+    
+    // ⭐ UPDATED: Use .instance for subscription
+    OutletSocketService.instance.subscribe(_onOutlets);
   }
 
   void _connectOutletSocket(double lat, double lng) {
     debugPrint('🚀 Connect outlets → $lat,$lng');
     setState(() => _loadingOutlets = true);
-    OutletSocketService.disconnect();
-    OutletSocketService.connect(lat: lat, lng: lng);
+    
+    // ⭐ UPDATED: Use .instance for singleton access
+    OutletSocketService.instance.disconnect();
+    OutletSocketService.instance.connect(lat: lat, lng: lng);
   }
 
   void _onCategories(List<Category> categories) {
@@ -75,6 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onOutlets(List<Outlet> outlets) {
     if (!mounted) return;
+    
+    // Backend returns outlets based on radius, but we filter for 6km here
     final nearby = outlets.where((o) {
       if (o.distanceKm == null) return false;
       return o.distanceKm! <= 6;
@@ -90,7 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     CategorySocketService.unsubscribe(_onCategories);
-    OutletSocketService.unsubscribe(_onOutlets);
+    
+    // ⭐ UPDATED: Use .instance for unsubscribe
+    OutletSocketService.instance.unsubscribe(_onOutlets);
     super.dispose();
   }
 
@@ -100,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final lat = location.current?.latitude;
     final lng = location.current?.longitude;
 
+    // Detect location change to reconnect socket
     if (lat != null && lng != null && (_lastLat != lat || _lastLng != lng)) {
       _lastLat = lat;
       _lastLng = lng;
@@ -129,7 +137,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(height: HomeSpacing.sm),
                     HomeSearchSection(),
                     SizedBox(height: HomeSpacing.md),
-                    // ⭐ TOP LEVEL BANNER (Right below search)
                     HomeTopBanner(),
                   ],
                 ),
@@ -142,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 categories: _categories,
               ),
 
-              /* MIDDLE BANNER (Moved below categories) */
+              /* MIDDLE BANNER */
               const SizedBox(height: HomeSpacing.md),
               const HomeBannerSliderSection(),
 

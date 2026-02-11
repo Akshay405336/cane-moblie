@@ -8,7 +8,7 @@ class Env {
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://arrested-bridge-choosing-shows.trycloudflare.com';
+      : 'https://objects-supported-east-bikini.trycloudflare.com';
   /// App name
   static const String appName = 'Cane & Tender';
 }
