@@ -19,11 +19,16 @@ class CategoryListWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    // Calculate dynamic width for 3 items per row
+    // ScreenWidth - (Horizontal Padding * 2) - (Separators * 2) / 3
+    final screenWidth = MediaQuery.of(context).size.width;
+    final itemWidth = (screenWidth - (HomeSpacing.md * 2) - (HomeSpacing.md * 2)) / 3.2;
+
     return Padding(
       padding: const EdgeInsets.only(top: HomeSpacing.sm),
       child: SizedBox(
-        // Slightly increased height to accommodate the fresher look
-        height: 130, 
+        // Increased height for larger boxes
+        height: 150, 
         child: ListView.separated(
           key: const PageStorageKey('category-list'),
           scrollDirection: Axis.horizontal,
@@ -31,17 +36,18 @@ class CategoryListWidget extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: HomeSpacing.md,
-            vertical: 10, // Added vertical padding for shadow breathing room
+            vertical: 12, 
           ),
           itemCount: categories.length,
           separatorBuilder: (_, __) =>
-              const SizedBox(width: HomeSpacing.md), // Slightly wider gap
+              const SizedBox(width: HomeSpacing.md),
           itemBuilder: (context, index) {
             final category = categories[index];
 
             return CategoryIconTile(
               key: ValueKey(category.id),
               category: category,
+              width: itemWidth, // Pass the calculated width
               onTap: onTap == null
                   ? null
                   : () => onTap!(category),
@@ -59,17 +65,18 @@ class CategoryListWidget extends StatelessWidget {
 
 class CategoryIconTile extends StatelessWidget {
   final Category category;
+  final double width;
   final VoidCallback? onTap;
 
   const CategoryIconTile({
     super.key,
     required this.category,
+    required this.width,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Get dynamic colors
     final iconColor = _CategoryStyle.iconColorFor(category.id);
     final icon = _CategoryStyle.iconFor(category.id);
 
@@ -77,24 +84,23 @@ class CategoryIconTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20), // Softer corners
+        borderRadius: BorderRadius.circular(24),
         child: Container(
-          width: 80, // Slightly wider for better breathing room
-          padding: const EdgeInsets.all(8),
+          width: width, // Dynamic width for 3 per row
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.grey.withOpacity(0.08), // Subtle border
-              width: 1,
+              color: Colors.grey.withOpacity(0.1),
+              width: 1.2,
             ),
             boxShadow: [
-              // Modern, diffused shadow
               BoxShadow(
-                color: const Color(0xFF1D1617).withOpacity(0.07),
-                offset: const Offset(0, 8),
-                blurRadius: 15,
-                spreadRadius: -3,
+                color: const Color(0xFF1D1617).withOpacity(0.08),
+                offset: const Offset(0, 10),
+                blurRadius: 20,
+                spreadRadius: -2,
               ),
             ],
           ),
@@ -102,15 +108,14 @@ class CategoryIconTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icon Container
+              // Larger Icon Container
               Container(
-                width: 48,
-                height: 48,
+                width: 56, // Increased from 48
+                height: 56, // Increased from 48
                 decoration: BoxDecoration(
-                  // Dynamic background color (15% opacity)
                   color: category.imageUrl != null && category.imageUrl!.isNotEmpty
                       ? Colors.grey.withOpacity(0.05)
-                      : iconColor.withOpacity(0.15),
+                      : iconColor.withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -120,9 +125,9 @@ class CategoryIconTile extends StatelessWidget {
                   iconColor: iconColor,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               
-              // Text
+              // Text with slightly larger font
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: Text(
@@ -131,11 +136,11 @@ class CategoryIconTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: HomeTextStyles.body.copyWith(
-                    fontSize: 12,
-                    height: 1.2,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13, // Increased from 12
+                    height: 1.1,
+                    fontWeight: FontWeight.w700,
                     color: Colors.black87,
-                    letterSpacing: 0.3,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ),
@@ -165,15 +170,15 @@ class _CategoryIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return ClipOval( // Changed to Oval for consistency with container
+      return ClipOval(
         child: Image.network(
           imageUrl!,
-          width: 48,
-          height: 48,
+          width: 56,
+          height: 56,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Icon(
             icon,
-            size: 24,
+            size: 28, // Increased icon size
             color: iconColor,
           ),
         ),
@@ -182,7 +187,7 @@ class _CategoryIcon extends StatelessWidget {
 
     return Icon(
       icon,
-      size: 24,
+      size: 28, // Increased icon size
       color: iconColor,
     );
   }

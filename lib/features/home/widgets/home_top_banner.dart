@@ -17,7 +17,7 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
     {
       "title": "Pure Hydration",
       "subtitle": "100% Organic\nTender Coconut",
-      "image": "assets/images/homebg1.png",
+      "image": "assets/images/homebg3.png",
       "accentColor": const Color(0xFF2E7D32),
       "tag": "FRESH"
     },
@@ -49,8 +49,8 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
       if (_pageController.hasClients) {
         _pageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 1000),
-          curve: Curves.easeInOutCubic,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.decelerate,
         );
       }
     });
@@ -68,7 +68,7 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 190,
+          height: 210,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _slides.length,
@@ -78,91 +78,107 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
               return AnimatedBuilder(
                 animation: _pageController,
                 builder: (context, child) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        )
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
-                      child: Stack(
-                        children: [
-                          // Floating Decorative Circle (Unique for each slide)
-                          Positioned(
-                            right: -20,
-                            bottom: -20,
-                            child: CircleAvatar(
-                              radius: 70,
-                              backgroundColor: (slide['accentColor'] as Color).withOpacity(0.08),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(22),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        slide['tag'],
-                                        style: TextStyle(
-                                          color: slide['accentColor'],
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 1.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        slide['title'],
-                                        style: const TextStyle(
-                                          color: Color(0xFF1A1A1A),
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w900,
-                                          height: 1.1,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        slide['subtitle'],
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Hero(
-                                    tag: slide['image'],
-                                    child: Transform.rotate(
-                                      angle: 0.1, // Slight tilt for style
-                                      child: Image.asset(
-                                        slide['image'],
-                                        fit: BoxFit.contain,
+                  double value = 1.0;
+                  if (_pageController.position.haveDimensions) {
+                    value = _pageController.page! - index;
+                    value = (1 - (value.abs() * 0.1)).clamp(0.0, 1.0);
+                  }
+
+                  return Center(
+                    child: Transform.scale(
+                      scale: Curves.easeInOut.transform(value),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white, // Pure white background
+                          borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (slide['accentColor'] as Color).withOpacity(0.12),
+                              blurRadius: 25,
+                              offset: const Offset(0, 12),
+                            )
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 24),
+                                child: Row(
+                                  children: [
+                                    // Text Content Section
+                                    Expanded(
+                                      flex: 5,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: (slide['accentColor'] as Color).withOpacity(0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              slide['tag'],
+                                              style: TextStyle(
+                                                color: slide['accentColor'],
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 1.2,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            slide['title'],
+                                            style: const TextStyle(
+                                              color: Color(0xFF1A1A1A),
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w900,
+                                              height: 1.1,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            slide['subtitle'],
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ),
+                                    
+                                    // Image Section - Increased flex and image height
+                                    Expanded(
+                                      flex: 6, // Increased from 4
+                                      child: Transform.translate(
+                                        offset: const Offset(15, 0), // Adjusted for larger size
+                                        child: Transform.rotate(
+                                          angle: -0.05,
+                                          child: Hero(
+                                            tag: slide['image'],
+                                            child: Image.asset(
+                                              slide['image'],
+                                              fit: BoxFit.contain,
+                                              height: 240, // Increased from 160
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   );
@@ -171,16 +187,18 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
             },
           ),
         ),
-        // Minimalist Page Indicators
+        
+        // Modernized Page Indicators
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             _slides.length,
             (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 6,
-              width: _currentPage == index ? 20 : 6,
+              duration: const Duration(milliseconds: 400),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 5,
+              width: _currentPage == index ? 24 : 8,
               decoration: BoxDecoration(
                 color: _currentPage == index 
                     ? _slides[index]['accentColor'] 
