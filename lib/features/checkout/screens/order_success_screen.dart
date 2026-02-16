@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../routes.dart';
-import '../../orders/models/order.model.dart'; // Ensure this points to your Order model
+import '../../orders/models/order.model.dart'; 
 
 class OrderSuccessScreen extends StatefulWidget {
   final Order order; // Accepts the order object passed from Checkout
@@ -35,6 +35,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    // ⭐ Logic to determine which reference number to show
+    final String displayRef = widget.order.orderNumber.isNotEmpty 
+        ? widget.order.orderNumber 
+        : widget.order.id.substring(0, 8).toUpperCase();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -76,7 +81,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
               const SizedBox(height: 12),
               
               Text(
-                'Thank you for your purchase.\nYour order #${widget.order.id.substring(0, 8)} has been confirmed.',
+                'Thank you for your purchase.\nYour order #$displayRef has been confirmed.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -93,7 +98,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                 height: 56,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Navigate to Order Details
+                    // Navigate to Order Details (Still use ID for the route/API)
                     Navigator.pushReplacementNamed(
                       context,
                       AppRoutes.orderDetails,
@@ -125,7 +130,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> with SingleTick
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32), // Your HomeColors.primaryGreen
+                    backgroundColor: const Color(0xFF2E7D32), 
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,

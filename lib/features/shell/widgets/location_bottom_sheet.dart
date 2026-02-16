@@ -27,7 +27,7 @@ class _LocationBottomSheetState extends State<LocationBottomSheet>
   bool _gpsEnabled = true;
 
   /* ================================================= */
-  /* INIT                                              */
+  /* INIT                                               */
   /* ================================================= */
 
   @override
@@ -68,24 +68,23 @@ class _LocationBottomSheetState extends State<LocationBottomSheet>
   /* RETURN FROM SETTINGS                              */
   /* ================================================= */
 
-@override
-void didChangeAppLifecycleState(AppLifecycleState state) async {
-  if (state != AppLifecycleState.resumed) return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state != AppLifecycleState.resumed) return;
 
-  debugPrint('🔁 App resumed → rechecking GPS');
+    debugPrint('🔁 App resumed → rechecking GPS');
 
-  await Future.delayed(const Duration(milliseconds: 400));
-  await _checkGps();
+    await Future.delayed(const Duration(milliseconds: 400));
+    await _checkGps();
 
-  /// ⭐ JUST CLOSE SHEET (NO DETECT HERE)
-  if (widget.autoClose &&
-    _gpsEnabled &&
-    mounted &&
-    Navigator.canPop(context)) {
-  Navigator.pop(context);
-}
-}
-
+    /// ⭐ JUST CLOSE SHEET (NO DETECT HERE)
+    if (widget.autoClose &&
+        _gpsEnabled &&
+        mounted &&
+        Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+  }
 
   /* ================================================= */
   /* BUILD                                             */
@@ -108,10 +107,10 @@ void didChangeAppLifecycleState(AppLifecycleState state) async {
       if (!mounted) return;
 
       if (widget.autoClose &&
-    location.hasLocation &&
-    Navigator.canPop(context)) {
-  Navigator.pop(context);
-}
+          location.hasLocation &&
+          Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
     });
 
     return SafeArea(
@@ -127,70 +126,78 @@ void didChangeAppLifecycleState(AppLifecycleState state) async {
           children: [
             const BottomSheetHandle(),
             const SizedBox(height: 20),
-/* ================================================= */
-/* ⭐ GPS / CURRENT LOCATION SECTION                  */
-/* ================================================= */
 
-if (!_gpsEnabled)
-  LocationPermissionOffTile(
-    onEnablePressed: () async {
-      debugPrint('🚀 Enable tapped');
+            // ⭐ Wrap the scrollable content in Expanded to prevent overflow
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /* ================================================= */
+                    /* ⭐ GPS / CURRENT LOCATION SECTION                  */
+                    /* ================================================= */
 
-      final granted = await LocationService.requestPermission();
-      if (!granted) {
-        debugPrint('❌ Permission denied');
-        return;
-      }
+                    if (!_gpsEnabled)
+                      LocationPermissionOffTile(
+                        onEnablePressed: () async {
+                          debugPrint('🚀 Enable tapped');
 
-      await LocationService.openSettings();
-    },
-  )
-else if (location.isDetecting)
-  const LocationFetchingTile()
-else
-  CurrentLocationTile(
-    isDetecting: false,
-    onTap: () async {
-  debugPrint('📍 Detect tapped');
+                          final granted = await LocationService.requestPermission();
+                          if (!granted) {
+                            debugPrint('❌ Permission denied');
+                            return;
+                          }
 
-  await location.detectCurrentLocation();
+                          await LocationService.openSettings();
+                        },
+                      )
+                    else if (location.isDetecting)
+                      const LocationFetchingTile()
+                    else
+                      CurrentLocationTile(
+                        isDetecting: false,
+                        onTap: () async {
+                          debugPrint('📍 Detect tapped');
 
-  if (mounted && Navigator.canPop(context)) {
-    Navigator.pop(context); // ⭐ close after select
-  }
-},
-  ),
+                          await location.detectCurrentLocation();
 
-/* ================================================= */
-/* ⭐ ALWAYS SHOW SAVED ADDRESSES IF LOGGED IN ⭐ */
-/* ================================================= */
+                          if (mounted && Navigator.canPop(context)) {
+                            Navigator.pop(context); // ⭐ close after select
+                          }
+                        },
+                      ),
 
-if (savedCtrl.isLoggedIn) ...[
-  const SizedBox(height: 26),
-  const SectionTitle(text: 'Saved addresses'),
-  const SizedBox(height: 12),
+                    /* ================================================= */
+                    /* ⭐ ALWAYS SHOW SAVED ADDRESSES IF LOGGED IN ⭐ */
+                    /* ================================================= */
 
-  SavedAddressList(
-    activeSavedId: location.current?.savedAddressId,
-    onSelect: (addr) async {
-  debugPrint('🏠 Saved selected → ${addr.address}');
+                    if (savedCtrl.isLoggedIn) ...[
+                      const SizedBox(height: 26),
+                      const SectionTitle(text: 'Saved addresses'),
+                      const SizedBox(height: 12),
+                      SavedAddressList(
+                        activeSavedId: location.current?.savedAddressId,
+                        onSelect: (addr) async {
+                          debugPrint('🏠 Saved selected → ${addr.address}');
 
-  await location.setSaved(addr.toLocationData());
+                          await location.setSaved(addr.toLocationData());
 
-  if (mounted && Navigator.canPop(context)) {
-    Navigator.pop(context); // ⭐ close after select
-  }
-},
-  ),
-],
+                          if (mounted && Navigator.canPop(context)) {
+                            Navigator.pop(context); // ⭐ close after select
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
 
-
-            const Spacer(),
             const Divider(),
             const SizedBox(height: 12),
 
             /* ================================================= */
-            /* MANUAL SEARCH                                      */
+            /* MANUAL SEARCH                                     */
             /* ================================================= */
             InkWell(
               onTap: () async {

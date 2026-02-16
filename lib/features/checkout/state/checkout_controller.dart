@@ -29,7 +29,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
   bool get hasPendingOrder => _hasPendingOrder;
 
   /* ================================================= */
-  /* INITIALIZATION                                    */
+  /* INITIALIZATION                                   */
   /* ================================================= */
 
   void initRazorpay() {
@@ -44,7 +44,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
   }
 
   /* ================================================= */
-  /* BASIC STATE                                       */
+  /* BASIC STATE                                      */
   /* ================================================= */
 
   void setOutlet(String outletId) {
@@ -123,7 +123,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
         'description': 'Fresh Juice Order',
         'timeout': 120,
         'prefill': {
-          'contact': '9876543210',
+          'contact': '9876543210', // Consider making these dynamic from user profile
           'email': 'customer@example.com'
         }
       };
@@ -144,7 +144,6 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
       final message =
           e.toString().replaceAll("Exception:", "").trim().toLowerCase();
 
-      // 🔥 Proper pending order detection
       if (message.contains("order in progress") ||
           message.contains("pending order")) {
         _hasPendingOrder = true;
@@ -164,7 +163,7 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
   }
 
   /* ================================================= */
-  /* HANDLERS                                          */
+  /* HANDLERS                                         */
   /* ================================================= */
 
   Future<void> _handlePaymentSuccess(
@@ -183,9 +182,11 @@ class CheckoutController extends ValueNotifier<CheckoutSummary?> {
         razorpaySignature: response.signature ?? "",
       );
 
+      // Refresh cart to empty it
       await CartController.instance.load();
 
       if (_currentInternalOrderId != null) {
+        // ⭐ Fetching the order details which now includes orderNumber
         final order =
             await CheckoutApi.getOrder(_currentInternalOrderId!);
         _checkoutCompleter?.complete(order);

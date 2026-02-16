@@ -62,7 +62,6 @@ class CheckoutApi {
     } on DioException catch (e) {
       debugPrint('❌ Start Checkout Failed: $e');
 
-      // 🔥 If backend sends 400 (pending order or business rule)
       if (e.response?.statusCode == 400) {
         final message =
             e.response?.data?['message'] ??
@@ -70,7 +69,6 @@ class CheckoutApi {
         throw Exception(message);
       }
 
-      // 🔥 Other server errors
       if (e.response?.statusCode == 500) {
         throw Exception("Server error. Please try again later.");
       }
@@ -110,13 +108,15 @@ class CheckoutApi {
   }
 
   /* ================================================= */
-  /* GET ORDER                                         */
+  /* GET ORDER (⭐ Updated for orderNumber Support)      */
   /* ================================================= */
 
   static Future<Order> getOrder(String orderId) async {
     try {
       final res = await _dio.get('/orders/$orderId');
-      return Order.fromJson(res.data['data']);
+      // Pass the whole res.data because Order.fromJson 
+      // is already built to handle the {'data': ...} wrapper.
+      return Order.fromJson(res.data); 
     } catch (e) {
       debugPrint('❌ Get Order Failed: $e');
       throw Exception('Could not fetch order details');

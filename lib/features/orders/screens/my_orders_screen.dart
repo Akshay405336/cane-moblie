@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/http_client.dart';
-import '../../../core/network/url_helper.dart'; // ✅ Added this import (Same as CartPage)
+import '../../../core/network/url_helper.dart'; 
 import '../../../routes.dart';
 import '../models/order.model.dart';
 
@@ -97,7 +97,6 @@ class _ProOrderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Date Formatting
     String formattedDate = order.orderDate;
     try {
       if (order.orderDate.isNotEmpty) {
@@ -106,11 +105,7 @@ class _ProOrderTile extends StatelessWidget {
       }
     } catch (_) {}
 
-    // 2. Image URL Construction (✅ FIXED: Using UrlHelper like CartPage)
-    // This handles the base URL and slashes automatically
     final imageUrl = UrlHelper.full(order.firstProductImage);
-
-    // 3. Status Color
     final statusColor = _getStatusColor(order.status);
 
     return Container(
@@ -135,14 +130,28 @@ class _ProOrderTile extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Date & Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      formattedDate,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.orderNumber.isNotEmpty ? order.orderNumber : "Order Details",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          formattedDate,
+                          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                        ),
+                      ],
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -163,19 +172,16 @@ class _ProOrderTile extends StatelessWidget {
                 ),
                 const Divider(height: 20),
                 
-                // Middle Row: Image & Info
                 Row(
                   children: [
-                    // Image Box
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         width: 60,
                         height: 60,
                         color: Colors.grey[200],
-                        // ✅ FIXED: Using the corrected imageUrl
                         child: order.firstProductImage.isEmpty
-                            ? const Icon(Icons.fastfood, color: Colors.grey)
+                            ? const Icon(Icons.receipt_long, color: Colors.grey)
                             : Image.network(
                                 imageUrl,
                                 fit: BoxFit.cover,
@@ -185,7 +191,6 @@ class _ProOrderTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     
-                    // Text Details
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +201,7 @@ class _ProOrderTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 15,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -204,7 +209,7 @@ class _ProOrderTile extends StatelessWidget {
                             order.itemCount > 1 
                                 ? "+ ${order.itemCount - 1} more items" 
                                 : "1 Item",
-                            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                           ),
                           const SizedBox(height: 4),
                           Text(

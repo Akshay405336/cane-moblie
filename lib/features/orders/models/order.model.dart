@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart'; // ⭐ Added this for debugPrint
+
 class Order {
   final String id;
+  final String orderNumber;
   final String status;
   final double grandTotal;
   final String orderDate;
@@ -9,6 +12,7 @@ class Order {
 
   Order({
     required this.id,
+    required this.orderNumber,
     required this.status,
     required this.grandTotal,
     required this.orderDate,
@@ -32,11 +36,12 @@ class Order {
       return (val is num) ? val.toInt() : int.tryParse(val.toString()) ?? 0;
     }
 
-    // 3. Robust Item Parsing (The Crash Fix)
+    // 3. Robust Item Parsing
     String img = '';
-    String name = 'Unknown Item';
+    String name = ''; // Start empty to check fallbacks
 
     try {
+      // Priority A: Extract from items list (Full Order Details API)
       if (data['items'] != null && data['items'] is List) {
         final List list = data['items'];
         if (list.isNotEmpty) {
@@ -44,21 +49,38 @@ class Order {
           img = safeStr(first['productImage']);
           name = safeStr(first['productName']);
         }
+      } 
+      
+      // Priority B: Extract from direct summary fields (Optimized List API)
+      if (name.isEmpty) {
+        name = safeStr(data['firstProductName']);
+      }
+      if (img.isEmpty) {
+        img = safeStr(data['firstProductImage']);
       }
     } catch (e) {
-      // If parsing fails, use defaults. Do not crash.
-      img = '';
-      name = 'Error Item';
+      debugPrint("Parsing error in Order Model: $e");
     }
+
+    final String displayOrderNum = safeStr(data['orderNumber']);
+    
+    // ⭐ Logic for name fallback: use orderNumber instead of substring of ID
+    // This ensures your list view shows "Order #CNT-..." instead of "Unknown Item"
+    final String finalName = (name.isEmpty || name == 'Unknown Item')
+        ? (displayOrderNum.isNotEmpty 
+            ? 'Order #$displayOrderNum' 
+            : 'Order #${safeStr(data['id']).substring(0, 8).toUpperCase()}') 
+        : name;
 
     return Order(
       id: safeStr(data['id']),
+      orderNumber: displayOrderNum,
       status: safeStr(data['status']).isEmpty ? 'PENDING' : safeStr(data['status']),
       grandTotal: safeDouble(data['grandTotal']),
       orderDate: safeStr(data['createdAt']),
       itemCount: safeInt(data['itemCount']),
       firstProductImage: img,
-      firstProductName: name.isEmpty ? 'Order #${safeStr(data['id']).substring(0, 4)}' : name,
+      firstProductName: finalName,
     );
   }
 }

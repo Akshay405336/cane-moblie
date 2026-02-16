@@ -64,6 +64,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final status = order!['status'] ?? 'PENDING';
     final dateStr = order!['createdAt'] ?? '';
     final orderId = order!['id'] ?? '...';
+    
+    // ⭐ NEW: Extract orderNumber from backend data
+    final orderNumber = order!['orderNumber']?.toString() ?? '';
 
     // 1. Format Date
     String formattedDate = dateStr;
@@ -79,7 +82,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // === HEADER CARD (ID, Date, Status) ===
+          // === HEADER CARD (orderNumber, Date, Status) ===
           Container(
             padding: const EdgeInsets.all(16),
             decoration: _boxDecoration(),
@@ -91,7 +94,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Order #${orderId.toString().substring(0, 8).toUpperCase()}",
+                        // ⭐ Updated to show orderNumber. Fallback to ID substring if empty.
+                        orderNumber.isNotEmpty 
+                            ? "Order #$orderNumber" 
+                            : "Order #${orderId.toString().substring(0, 8).toUpperCase()}",
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
@@ -120,7 +126,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final item = items[index];
-                // ✅ No need to pass baseUrl manually anymore
                 return _ItemTile(item: item);
               },
             ),
@@ -228,19 +233,16 @@ class _SectionHeader extends StatelessWidget {
 class _ItemTile extends StatelessWidget {
   final Map<String, dynamic> item;
   
-  // ✅ Removed manual baseUrl parameter
   const _ItemTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Use UrlHelper for clean image handling
     final imgUrl = UrlHelper.full(item['productImage']?.toString() ?? '');
 
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Image
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Container(
@@ -258,7 +260,6 @@ class _ItemTile extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           
-          // Name & Qty
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +277,6 @@ class _ItemTile extends StatelessWidget {
             ),
           ),
 
-          // Price
           Text(
             "₹${item['unitPrice']}",
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
@@ -297,7 +297,6 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Safe conversion
     double val = 0.0;
     if (value != null) {
       val = (value is num) ? value.toDouble() : double.tryParse(value.toString()) ?? 0.0;
