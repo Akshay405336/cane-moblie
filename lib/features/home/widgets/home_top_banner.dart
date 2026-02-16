@@ -13,27 +13,26 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
   int _currentPage = 0;
   Timer? _timer;
 
-  // Data for the 3 slides using your PNGs
   final List<Map<String, dynamic>> _slides = [
     {
       "title": "Pure Hydration",
-      "subtitle": "100% Organic Tender Coconut",
-      "image": "assets/images/homebg1.png", 
-      "colors": [const Color(0xFF00b09b), const Color(0xFF96c93d)],
+      "subtitle": "100% Organic\nTender Coconut",
+      "image": "assets/images/homebg1.png",
+      "accentColor": const Color(0xFF2E7D32),
       "tag": "FRESH"
     },
     {
       "title": "Sweet Energy",
-      "subtitle": "Freshly Pressed Sugarcane",
+      "subtitle": "Freshly Pressed\nSugarcane Juice",
       "image": "assets/images/homebg2.png",
-      "colors": [const Color(0xFFf2994a), const Color(0xFFf2c94c)],
+      "accentColor": const Color(0xFFF2994A),
       "tag": "NATURAL"
     },
     {
       "title": "Zesty Refresh",
-      "subtitle": "Chilled Mint & Lime Juice",
+      "subtitle": "Chilled Mint\n& Lime Zest",
       "image": "assets/images/homebg4.png",
-      "colors": [const Color(0xFF11998e), const Color(0xFF38ef7d)],
+      "accentColor": const Color(0xFF11998E),
       "tag": "ICE COLD"
     },
   ];
@@ -41,8 +40,7 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
   @override
   void initState() {
     super.initState();
-    // Auto-slide every 4 seconds
-    _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (_currentPage < _slides.length - 1) {
         _currentPage++;
       } else {
@@ -51,8 +49,8 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
       if (_pageController.hasClients) {
         _pageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOutQuart,
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeInOutCubic,
         );
       }
     });
@@ -67,97 +65,132 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 170,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: _slides.length,
-        onPageChanged: (index) => setState(() => _currentPage = index),
-        itemBuilder: (context, index) {
-          final slide = _slides[index];
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: slide['colors'],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (slide['colors'][0] as Color).withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                )
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -30,
-                    top: -30,
-                    child: CircleAvatar(
-                      radius: 80,
-                      backgroundColor: Colors.white.withOpacity(0.1),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  slide['tag'],
-                                  style: const TextStyle(
-                                    color: Colors.white, 
-                                    fontSize: 10, 
-                                    fontWeight: FontWeight.bold, 
-                                    letterSpacing: 1
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                slide['title'],
-                                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
-                              ),
-                              Text(
-                                slide['subtitle'],
-                                style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Transform.scale(
-                            scale: 1.2,
-                            child: Image.asset(slide['image'], fit: BoxFit.contain),
-                          ),
-                        ),
+    return Column(
+      children: [
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: _slides.length,
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            itemBuilder: (context, index) {
+              final slide = _slides[index];
+              return AnimatedBuilder(
+                animation: _pageController,
+                builder: (context, child) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
                       ],
                     ),
-                  ),
-                ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        children: [
+                          // Floating Decorative Circle (Unique for each slide)
+                          Positioned(
+                            right: -20,
+                            bottom: -20,
+                            child: CircleAvatar(
+                              radius: 70,
+                              backgroundColor: (slide['accentColor'] as Color).withOpacity(0.08),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(22),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        slide['tag'],
+                                        style: TextStyle(
+                                          color: slide['accentColor'],
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        slide['title'],
+                                        style: const TextStyle(
+                                          color: Color(0xFF1A1A1A),
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1.1,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        slide['subtitle'],
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Hero(
+                                    tag: slide['image'],
+                                    child: Transform.rotate(
+                                      angle: 0.1, // Slight tilt for style
+                                      child: Image.asset(
+                                        slide['image'],
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        // Minimalist Page Indicators
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _slides.length,
+            (index) => AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 6,
+              width: _currentPage == index ? 20 : 6,
+              decoration: BoxDecoration(
+                color: _currentPage == index 
+                    ? _slides[index]['accentColor'] 
+                    : Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

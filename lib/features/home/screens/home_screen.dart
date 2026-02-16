@@ -12,7 +12,6 @@ import '../../location/state/location_controller.dart';
 import '../sections/home_search.section.dart';
 import '../sections/home_categories.section.dart';
 import '../sections/home_outlets.section.dart';
-import '../widgets/home_banner_slider.section.dart';
 import '../widgets/home_top_banner.dart'; 
 
 import '../theme/home_colors.dart';
@@ -148,10 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 loading: _loadingCategories,
                 categories: _categories,
               ),
-
-              /* MIDDLE BANNER */
-              const SizedBox(height: HomeSpacing.md),
-              const HomeBannerSliderSection(),
 
               /* OUTLETS */
               const SizedBox(height: HomeSpacing.xl),
