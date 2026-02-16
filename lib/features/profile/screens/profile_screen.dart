@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart'; // ⭐ Required for Image Picking
 
 import '../../../routes.dart';
 import '../../../utils/auth_state.dart';
 import '../../../utils/app_toast.dart';
+import '../../../core/network/url_helper.dart'; // ⭐ Added for Avatar URLs
 import '../../auth/services/session_api.dart';
 
 import '../state/profile_controller.dart';
@@ -42,7 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        // Added iconTheme to make the back arrow black
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: ValueListenableBuilder<ProfileModel?>(
@@ -74,11 +76,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ---------------- PAYMENTS ----------------
               _ProfileTile(
-  icon: Icons.payment_outlined,
-  title: 'Payment Methods',
-  // ⭐ UPDATED: Now navigates to the new screen instead of just showing a toast
-  onTap: () => Navigator.pushNamed(context, AppRoutes.paymentMethods),
-),
+                icon: Icons.payment_outlined,
+                title: 'Payment Methods',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.paymentMethods),
+              ),
 
               const SizedBox(height: 24),
               const Text("Settings", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -108,6 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = profile?.fullName ?? "Guest User";
     final email = profile?.email ?? "Login to view details";
     final initial = name.isNotEmpty ? name[0].toUpperCase() : "G";
+    final avatarUrl = profile?.avatarUrl != null ? UrlHelper.full(profile!.avatarUrl!) : null;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -121,9 +123,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 30,
+            radius: 35,
             backgroundColor: const Color(0xFF2E7D32),
-            child: Text(initial, style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null 
+                ? Text(initial, style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold))
+                : null,
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -146,16 +151,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleLogout() async {
-    // 1. Clear Profile Data
     ProfileController.instance.clear();
-    
-    // 2. Call Logout API
     await SessionApi.logout();
-    
-    // 3. Reset Global Auth
     AuthState.reset();
-
-    // 4. Navigate
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
     }
@@ -180,6 +178,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   late TextEditingController _emailCtrl;
   String? _gender;
   DateTime? _dob;
+  File? _selectedImage; // ⭐ To hold picked file
   bool _saving = false;
 
   @override
@@ -189,6 +188,14 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     _emailCtrl = TextEditingController(text: widget.profile?.email ?? "");
     _gender = widget.profile?.gender;
     _dob = widget.profile?.dob;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (pickedFile != null) {
+      setState(() => _selectedImage = File(pickedFile.path));
+    }
   }
 
   Future<void> _save() async {
@@ -201,8 +208,9 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         email: _emailCtrl.text.trim(),
         gender: _gender,
         dob: _dob,
+        imageFile: _selectedImage, // ⭐ Pass file to controller
       );
-      if (mounted) Navigator.pop(context); // Close sheet on success
+      if (mounted) Navigator.pop(context);
       AppToast.success("Profile Updated!");
     } catch (e) {
       AppToast.error("Failed to update profile");
@@ -225,9 +233,48 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Edit Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Edit Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              ],
+            ),
             const SizedBox(height: 20),
             
+            // ⭐ Avatar Selection Area
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage: _selectedImage != null 
+                        ? FileImage(_selectedImage!) 
+                        : (widget.profile?.avatarUrl != null 
+                            ? NetworkImage(UrlHelper.full(widget.profile!.avatarUrl!)) 
+                            : null) as ImageProvider?,
+                    child: _selectedImage == null && widget.profile?.avatarUrl == null
+                        ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Color(0xFF2E7D32), shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+
             // Name Field
             TextFormField(
               controller: _nameCtrl,
@@ -241,6 +288,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               controller: _emailCtrl,
               decoration: _inputDecor("Email", Icons.email_outlined),
               keyboardType: TextInputType.emailAddress,
+              validator: (v) => v!.isEmpty ? "Email required" : null,
             ),
             const SizedBox(height: 16),
 
@@ -272,7 +320,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       if (d != null) setState(() => _dob = d);
                     },
                     child: InputDecorator(
-                      decoration: _inputDecor("Date of Birth", Icons.calendar_today),
+                      decoration: _inputDecor("DOB", Icons.calendar_today),
                       child: Text(
                         _dob == null ? "Select" : DateFormat('yyyy-MM-dd').format(_dob!),
                         style: const TextStyle(fontSize: 14),
