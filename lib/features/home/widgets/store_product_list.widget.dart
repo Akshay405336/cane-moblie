@@ -1,5 +1,7 @@
 import 'package:caneandtender/features/store/screens/outlet_products_screen.dart';
+import 'package:caneandtender/features/store/screens/product_details.screen.dart';
 import 'package:flutter/material.dart';
+
 
 // MODELS
 import '../../store/models/outlet.model.dart';
@@ -106,7 +108,6 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
                     ),
                     child: Column(
                       children: [
-                        // Animated Icon Pulse
                         Stack(
                           alignment: Alignment.center,
                           children: [
@@ -288,7 +289,7 @@ class _PremiumOutletHeader extends StatelessWidget {
 }
 
 /* ================================================= */
-/* MINI PRODUCT CARD (UNTOUCHED)                    */
+/* MINI PRODUCT CARD - UPDATED WITH NAVIGATION      */
 /* ================================================= */
 
 class _MiniProductCard extends StatelessWidget {
@@ -314,86 +315,104 @@ class _MiniProductCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 110,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: HomeColors.lightGrey,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                  image: DecorationImage(
-                    image: NetworkImage(product.mainImageUrl),
-                    fit: BoxFit.cover,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            // ⭐ Wrap content in InkWell for navigation
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductDetailsScreen(
+                      product: product,
+                      outletId: outletId,
+                    ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: HomeTextStyles.productName,
+                );
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 110,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: HomeColors.lightGrey,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                      image: DecorationImage(
+                        image: NetworkImage(product.mainImageUrl),
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${product.unit.value} ${product.unit.type}',
-                      style: HomeTextStyles.unit,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '₹${product.displayPrice.toInt()}', 
-                          style: HomeTextStyles.price.copyWith(color: HomeColors.primaryGreen)
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: HomeTextStyles.productName,
                         ),
-                        if (product.hasDiscount) ...[
-                          const SizedBox(width: 6),
-                          Text('₹${product.originalPrice.toInt()}', style: HomeTextStyles.originalPrice),
-                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          '${product.unit.value} ${product.unit.type}',
+                          style: HomeTextStyles.unit,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              '₹${product.displayPrice.toInt()}', 
+                              style: HomeTextStyles.price.copyWith(color: HomeColors.primaryGreen)
+                            ),
+                            if (product.hasDiscount) ...[
+                              const SizedBox(width: 6),
+                              Text('₹${product.originalPrice.toInt()}', style: HomeTextStyles.originalPrice),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: ProductAddButton(
-              product: product,
-              outletId: outletId,
-              onTap: () {},
             ),
-          ),
-          if (product.hasDiscount)
+            // The Add button remains on top and handles its own clicks
             Positioned(
-              top: 0,
-              left: 0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: HomeColors.discountRed,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(15),
-                    bottomRight: Radius.circular(12),
+              bottom: 8,
+              right: 8,
+              child: ProductAddButton(
+                product: product,
+                outletId: outletId,
+                onTap: () {},
+              ),
+            ),
+            if (product.hasDiscount)
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: HomeColors.discountRed,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(15),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    '${product.discountPercent}% OFF',
+                    style: HomeTextStyles.discount,
                   ),
                 ),
-                child: Text(
-                  '${product.discountPercent}% OFF',
-                  style: HomeTextStyles.discount,
-                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -28,6 +28,36 @@ class Cart {
   });
 
   /* ================================================= */
+  /* COPY WITH (Crucial for Optimistic UI Updates)     */
+  /* ================================================= */
+
+  Cart copyWith({
+    String? id,
+    String? outletId,
+    String? currency,
+    List<CartItem>? items,
+    int? itemCount,
+    double? subtotal,
+    double? discount,
+    double? afterDiscountTotal,
+    double? deliveryFee,
+    double? grandTotal,
+  }) {
+    return Cart(
+      id: id ?? this.id,
+      outletId: outletId ?? this.outletId,
+      currency: currency ?? this.currency,
+      items: items ?? this.items,
+      itemCount: itemCount ?? this.itemCount,
+      subtotal: subtotal ?? this.subtotal,
+      discount: discount ?? this.discount,
+      afterDiscountTotal: afterDiscountTotal ?? this.afterDiscountTotal,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      grandTotal: grandTotal ?? this.grandTotal,
+    );
+  }
+
+  /* ================================================= */
   /* EMPTY (for when API returns data: null)           */
   /* ================================================= */
 

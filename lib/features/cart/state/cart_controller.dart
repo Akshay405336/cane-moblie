@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Add this dependency
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/cart.model.dart';
 import '../models/cart_item.model.dart';
 import '../services/cart_api.dart';
 
 class CartController extends ValueNotifier<Cart> {
   CartController._() : super(Cart.empty()) {
-    // Automatically try to restore the last outlet ID on startup
     _restoreOutletId();
   }
 
@@ -16,17 +15,17 @@ class CartController extends ValueNotifier<Cart> {
   String? _outletId;
 
   bool get isLoading => _loading;
-  String? get currentOutletId => _outletId; 
+  String? get currentOutletId => _outletId;
 
   /* ================================================= */
-  /* PERSISTENCE HELPERS                              */
+  /* PERSISTENCE HELPERS                               */
   /* ================================================= */
 
   Future<void> _restoreOutletId() async {
     final prefs = await SharedPreferences.getInstance();
     _outletId = prefs.getString('last_outlet_id');
     if (_outletId != null) {
-      load(); // Auto-load if we found a saved ID
+      load();
     }
   }
 
@@ -66,7 +65,6 @@ class CartController extends ValueNotifier<Cart> {
       value = Cart.empty();
       return;
     }
-    // Maintain local sorting logic
     if (value.items.isNotEmpty && newCart.items.isNotEmpty) {
       final Map<String, int> currentOrder = {
         for (int i = 0; i < value.items.length; i++) value.items[i].productId: i
@@ -81,7 +79,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* LOAD CART - Updated with better error handling   */
+  /* LOAD CART                                        */
   /* ================================================= */
 
   Future<void> load() async {
@@ -102,7 +100,7 @@ class CartController extends ValueNotifier<Cart> {
   }
 
   /* ================================================= */
-  /* ADD ITEM                                          */
+  /* ADD ITEM                                         */
   /* ================================================= */
 
   Future<void> addItem({
@@ -116,7 +114,7 @@ class CartController extends ValueNotifier<Cart> {
       final shouldForceReplace = _outletId == null || _outletId != outletId;
       
       _outletId = outletId;
-      _saveOutletId(outletId); // Save for next app restart
+      _saveOutletId(outletId);
 
       _setCart(await CartApi.addItem(
         outletId: outletId,
@@ -129,10 +127,20 @@ class CartController extends ValueNotifier<Cart> {
     }
   }
 
-  // --- KEEPING YOUR OTHER METHODS EXACTLY AS THEY WERE ---
+  /* ================================================= */
+  /* UPDATE QTY - FIXED FOR DISMISSIBLE               */
+  /* ================================================= */
 
   Future<void> updateQty(String productId, int qty) async {
     _ensureOutlet();
+    
+    // OPTIMISTIC UPDATE: Remove item locally first if qty is 0 to prevent Dismissible crash
+    if (qty <= 0) {
+      final List<CartItem> updatedList = value.items.where((i) => i.productId != productId).toList();
+      // Update value immediately without setting loading yet to satisfy Dismissible
+      value = value.copyWith(items: updatedList); 
+    }
+
     try {
       _setLoading(true);
       if (qty <= 0) {
@@ -140,16 +148,31 @@ class CartController extends ValueNotifier<Cart> {
       } else {
         _setCart(await CartApi.updateQty(outletId: _outletId!, productId: productId, quantity: qty));
       }
+    } catch (e) {
+      debugPrint("🛒 Update error: $e");
+      load(); // Reload original state on error
     } finally {
       _setLoading(false);
     }
   }
 
+  /* ================================================= */
+  /* REMOVE - FIXED FOR DISMISSIBLE                   */
+  /* ================================================= */
+
   Future<void> remove(String productId) async {
     _ensureOutlet();
+    
+    // OPTIMISTIC REMOVE: satisfy the UI immediately
+    final List<CartItem> updatedList = value.items.where((i) => i.productId != productId).toList();
+    value = value.copyWith(items: updatedList);
+
     try {
       _setLoading(true);
       _setCart(await CartApi.remove(outletId: _outletId!, productId: productId));
+    } catch (e) {
+      debugPrint("🛒 Remove error: $e");
+      load();
     } finally {
       _setLoading(false);
     }
