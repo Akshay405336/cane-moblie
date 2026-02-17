@@ -8,7 +8,7 @@ class Env {
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://looksmart-admission-neighborhood-california.trycloudflare.com';
+      : 'https://pointed-closest-sao-constitution.trycloudflare.com';
   /// App name
   static const String appName = 'Cane & Tender';
 }

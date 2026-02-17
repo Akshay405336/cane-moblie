@@ -310,7 +310,7 @@ class _OutletInfoCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text("•  30-40 mins", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          Text("•  25-30 mins", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
           const SizedBox(width: 12),
           Text("•  2 km away", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
         ],

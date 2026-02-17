@@ -57,7 +57,7 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        /* ================= PREMIUM OUTLET NAME DESIGN ================= */
+        /* ================= PREMIUM OUTLET HEADER DESIGN ================= */
         _PremiumOutletHeader(
           outlet: widget.outlet,
           onTap: () {
@@ -70,8 +70,88 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
           },
         ),
 
-        /* ================= PRODUCT PREVIEW LIST ================= */
-        if (!_loading && _products.isNotEmpty) ...[
+        /* ================= PRODUCT PREVIEW LIST LOGIC ================= */
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.only(top: 24, bottom: 24),
+            child: Center(
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(HomeColors.primaryGreen),
+                ),
+              ),
+            ),
+          )
+        else if (_products.isEmpty)
+          /* ================= ANIMATED NO PRODUCTS STATE ================= */
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      children: [
+                        // Animated Icon Pulse
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              height: 60,
+                              width: 60,
+                              decoration: BoxDecoration(
+                                color: HomeColors.primaryGreen.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Icon(
+                              Icons.shopping_basket_outlined,
+                              size: 32,
+                              color: HomeColors.primaryGreen.withOpacity(0.4),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "No products available yet",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Check back later or explore other stores",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          )
+        else ...[
+          /* ================= PRODUCT PREVIEW LIST ================= */
           const SizedBox(height: 16),
           SizedBox(
             height: 240,
@@ -89,25 +169,14 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
             ),
           ),
           const SizedBox(height: 8),
-        ] else if (_loading)
-          const Padding(
-            padding: EdgeInsets.only(top: 12, left: 16),
-            child: SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(HomeColors.primaryGreen),
-              ),
-            ),
-          ),
+        ],
       ],
     );
   }
 }
 
 /* ================================================= */
-/* PREMIUM OUTLET HEADER DESIGN                      */
+/* UPDATED PREMIUM OUTLET HEADER DESIGN             */
 /* ================================================= */
 
 class _PremiumOutletHeader extends StatelessWidget {
@@ -118,7 +187,6 @@ class _PremiumOutletHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the first letter for the monogram
     String monogram = outlet.name.isNotEmpty ? outlet.name[0].toUpperCase() : 'S';
 
     return InkWell(
@@ -129,35 +197,28 @@ class _PremiumOutletHeader extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: HomeColors.primaryGreen.withOpacity(0.1)),
+          border: Border.all(color: Colors.grey.withOpacity(0.15)),
           boxShadow: [
             BoxShadow(
-              color: HomeColors.primaryGreen.withOpacity(0.05),
-              blurRadius: 12,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
-            // PREMIUM MONOGRAM BADGE (Replaced Icon)
             Container(
               height: 52,
               width: 52,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    HomeColors.primaryGreen,
-                    HomeColors.primaryGreen.withOpacity(0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: HomeColors.primaryGreen.withOpacity(0.2), width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: HomeColors.primaryGreen.withOpacity(0.3),
-                    blurRadius: 8,
+                    color: HomeColors.primaryGreen.withOpacity(0.05),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -165,15 +226,14 @@ class _PremiumOutletHeader extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 monogram,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: HomeColors.primaryGreen,
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,49 +241,44 @@ class _PremiumOutletHeader extends StatelessWidget {
                   Text(
                     outlet.name,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF1A1A1A),
                       letterSpacing: -0.5,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text("Fresh & Fast", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      const SizedBox(width: 6),
+                      Icon(Icons.circle, size: 4, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
+                      Text("Best Quality", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: HomeColors.primaryGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          "TRUSTED STORE",
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: HomeColors.primaryGreen,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.verified_rounded, size: 14, color: Colors.blueAccent),
+                      const Icon(Icons.star_rounded, size: 14, color: Colors.orange),
+                      const SizedBox(width: 2),
+                      const Text("4.5", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 10),
+                      Icon(Icons.access_time_filled_rounded, size: 13, color: HomeColors.primaryGreen),
+                      const SizedBox(width: 3),
+                      const Text("25 mins", style: TextStyle(fontSize: 11, color: Colors.black87)),
                     ],
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: HomeColors.primaryGreen.withOpacity(0.05),
+                color: Colors.grey[100],
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded, 
-                size: 14, 
-                color: HomeColors.primaryGreen
-              ),
+              child: Icon(Icons.chevron_right_rounded, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -233,7 +288,7 @@ class _PremiumOutletHeader extends StatelessWidget {
 }
 
 /* ================================================= */
-/* MINI PRODUCT CARD                                 */
+/* MINI PRODUCT CARD (UNTOUCHED)                    */
 /* ================================================= */
 
 class _MiniProductCard extends StatelessWidget {
