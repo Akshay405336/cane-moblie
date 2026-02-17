@@ -15,25 +15,28 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
 
   final List<Map<String, dynamic>> _slides = [
     {
-      "title": "Pure Hydration",
-      "subtitle": "100% Organic\nTender Coconut",
-      "image": "assets/images/homebg3.png",
-      "accentColor": const Color(0xFF2E7D32),
-      "tag": "FRESH"
-    },
-    {
       "title": "Sweet Energy",
       "subtitle": "Freshly Pressed\nSugarcane Juice",
       "image": "assets/images/homebg2.png",
-      "accentColor": const Color(0xFFF2994A),
-      "tag": "NATURAL"
+      "accentColor": const Color(0xFFD38345), // Orange for NATURAL
+      "tag": "NATURAL",
+      "tagBg": Color(0xFFFFEBDD),
+    },
+    {
+      "title": "Pure Hydration",
+      "subtitle": "100% Organic\nTender Coconut",
+      "image": "assets/images/homebg3.png",
+      "accentColor": const Color(0xFF6B8E23), // Olive Green for FRESH
+      "tag": "FRESH",
+      "tagBg": Color(0xFFF0F4E8),
     },
     {
       "title": "Zesty Refresh",
       "subtitle": "Chilled Mint\n& Lime Zest",
       "image": "assets/images/homebg4.png",
-      "accentColor": const Color(0xFF11998E),
-      "tag": "ICE COLD"
+      "accentColor": const Color(0xFF008080), // Teal for ICE COLD
+      "tag": "ICE COLD",
+      "tagBg": Color(0xFFE0F2F1),
     },
   ];
 
@@ -68,7 +71,7 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 210,
+          height: 200, // Adjusted height for better proportions
           child: PageView.builder(
             controller: _pageController,
             itemCount: _slides.length,
@@ -78,106 +81,90 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
               return AnimatedBuilder(
                 animation: _pageController,
                 builder: (context, child) {
-                  double value = 1.0;
-                  if (_pageController.position.haveDimensions) {
-                    value = _pageController.page! - index;
-                    value = (1 - (value.abs() * 0.1)).clamp(0.0, 1.0);
-                  }
-
                   return Center(
-                    child: Transform.scale(
-                      scale: Curves.easeInOut.transform(value),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white, // Pure white background
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (slide['accentColor'] as Color).withOpacity(0.12),
-                              blurRadius: 25,
-                              offset: const Offset(0, 12),
-                            )
-                          ],
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        image: const DecorationImage(
+                          image: AssetImage("assets/images/home.png"), // Main Background
+                          fit: BoxFit.cover,
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32),
-                          child: Stack(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 24),
-                                child: Row(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          )
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: Row( // Using Row to separate Text (Left) and Image (Right)
+                          children: [
+                            // 1. Text Section (Left Side)
+                            Expanded(
+                              flex: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start, // Align text left
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // Text Content Section
-                                    Expanded(
-                                      flex: 5,
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: (slide['accentColor'] as Color).withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              slide['tag'],
-                                              style: TextStyle(
-                                                color: slide['accentColor'],
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 1.2,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            slide['title'],
-                                            style: const TextStyle(
-                                              color: Color(0xFF1A1A1A),
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.w900,
-                                              height: 1.1,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            slide['subtitle'],
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500,
-                                              height: 1.3,
-                                            ),
-                                          ),
-                                        ],
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: slide['tagBg'],
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        slide['tag'],
+                                        style: TextStyle(
+                                          color: slide['accentColor'],
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.8,
+                                        ),
                                       ),
                                     ),
-                                    
-                                    // Image Section - Increased flex and image height
-                                    Expanded(
-                                      flex: 6, // Increased from 4
-                                      child: Transform.translate(
-                                        offset: const Offset(15, 0), // Adjusted for larger size
-                                        child: Transform.rotate(
-                                          angle: -0.05,
-                                          child: Hero(
-                                            tag: slide['image'],
-                                            child: Image.asset(
-                                              slide['image'],
-                                              fit: BoxFit.contain,
-                                              height: 240, // Increased from 160
-                                            ),
-                                          ),
-                                        ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      slide['title'],
+                                      style: const TextStyle(
+                                        color: Color(0xFF2C3E33), // Darker organic green
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      slide['subtitle'],
+                                      style: TextStyle(
+                                        color: const Color(0xFF2C3E33).withOpacity(0.7),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.2,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            
+                            // 2. Product Image Section (Right Side)
+                            Expanded(
+                              flex: 4,
+                              child: Hero(
+                                tag: slide['image'],
+                                child: Image.asset(
+                                  slide['image'],
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.centerRight,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -188,8 +175,8 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
           ),
         ),
         
-        // Modernized Page Indicators
-        const SizedBox(height: 8),
+        // Page Indicators
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -198,10 +185,10 @@ class _HomeTopBannerState extends State<HomeTopBanner> {
               duration: const Duration(milliseconds: 400),
               margin: const EdgeInsets.symmetric(horizontal: 3),
               height: 5,
-              width: _currentPage == index ? 24 : 8,
+              width: _currentPage == index ? 20 : 8,
               decoration: BoxDecoration(
                 color: _currentPage == index 
-                    ? _slides[index]['accentColor'] 
+                    ? const Color(0xFF2C3E33) 
                     : Colors.grey[300],
                 borderRadius: BorderRadius.circular(10),
               ),

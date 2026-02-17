@@ -38,6 +38,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   shared_preferences: ^2.2.0
   image_picker: ^1.0.7
+  video_player: ^2.8.1
+  chewie: ^1.7.1
 
 flutter:
   uses-material-design: true
@@ -46,4 +48,5 @@ flutter:
   assets:
     - assets/images/
     - assets/logo/
+    - assets/Sugarcane_and_Coconut_Juice_Video.mp4
     
