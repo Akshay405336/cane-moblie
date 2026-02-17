@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
 
 import '../../../core/network/http_client.dart';
-import '../../../core/network/url_helper.dart';
+import '../../../core/network/url_helper.dart'; // ✅ Added UrlHelper
+// import '../../../env.dart'; // ❌ Removed Env import (Not needed with UrlHelper)
 
 class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key});
@@ -44,7 +43,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
+      backgroundColor: const Color(0xFFF5F6F8), // Clean grey background
       appBar: AppBar(
         title: const Text('Order Details'),
         backgroundColor: Colors.white,
@@ -65,8 +64,11 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     final status = order!['status'] ?? 'PENDING';
     final dateStr = order!['createdAt'] ?? '';
     final orderId = order!['id'] ?? '...';
+    
+    // ⭐ NEW: Extract orderNumber from backend data
     final orderNumber = order!['orderNumber']?.toString() ?? '';
 
+    // 1. Format Date
     String formattedDate = dateStr;
     try {
       if (dateStr.isNotEmpty) {
@@ -80,7 +82,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // === HEADER CARD ===
+          // === HEADER CARD (orderNumber, Date, Status) ===
           Container(
             padding: const EdgeInsets.all(16),
             decoration: _boxDecoration(),
@@ -92,6 +94,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   children: [
                     Expanded(
                       child: Text(
+                        // ⭐ Updated to show orderNumber. Fallback to ID substring if empty.
                         orderNumber.isNotEmpty 
                             ? "Order #$orderNumber" 
                             : "Order #${orderId.toString().substring(0, 8).toUpperCase()}",
@@ -108,14 +111,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // === NEW: LIVE PREPARATION VIDEO SECTION ===
-          const _SectionHeader("Preparation Video"),
-          const OrderLiveVideo(
-            videoPath: 'assets/Sugarcane_and_Coconut_Juice_Video.mp4',
           ),
           
           const SizedBox(height: 20),
@@ -212,94 +207,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 }
 
 // =========================================================
-// NEW VIDEO WIDGET WITH CONTROLS (FIXED INITIALIZATION)
-// =========================================================
-
-class OrderLiveVideo extends StatefulWidget {
-  final String videoPath;
-  const OrderLiveVideo({super.key, required this.videoPath});
-
-  @override
-  State<OrderLiveVideo> createState() => _OrderLiveVideoState();
-}
-
-class _OrderLiveVideoState extends State<OrderLiveVideo> {
-  late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializePlayer();
-  }
-
-  Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.asset(widget.videoPath);
-    
-    try {
-      await _videoPlayerController.initialize();
-      if (!mounted) return;
-
-      _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
-        autoPlay: true,
-        looping: true,
-        aspectRatio: _videoPlayerController.value.aspectRatio,
-        allowFullScreen: true,
-        showControls: true,
-        placeholder: Container(color: Colors.black),
-        errorBuilder: (context, errorMessage) {
-          return Center(
-            child: Text(
-              "Could not load video: $errorMessage",
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          );
-        },
-        materialProgressColors: ChewieProgressColors(
-          playedColor: const Color(0xFF2E7D32),
-          handleColor: const Color(0xFF2E7D32),
-          backgroundColor: Colors.grey,
-          bufferedColor: Colors.white.withOpacity(0.5),
-        ),
-      );
-    } catch (e) {
-      debugPrint("Video Init Error: $e");
-    }
-    
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _videoPlayerController.dispose();
-    _chewieController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 220,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: _chewieController != null &&
-              _chewieController!.videoPlayerController.value.isInitialized
-          ? Chewie(controller: _chewieController!)
-          : const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-    );
-  }
-}
-
-// =========================================================
-// HELPER WIDGETS (RETAINED)
+// HELPER WIDGETS
 // =========================================================
 
 class _SectionHeader extends StatelessWidget {
@@ -324,11 +232,13 @@ class _SectionHeader extends StatelessWidget {
 
 class _ItemTile extends StatelessWidget {
   final Map<String, dynamic> item;
+  
   const _ItemTile({required this.item});
 
   @override
   Widget build(BuildContext context) {
     final imgUrl = UrlHelper.full(item['productImage']?.toString() ?? '');
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -349,17 +259,28 @@ class _ItemTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['productName'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(
+                  item['productName'] ?? 'Unknown',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
                 const SizedBox(height: 4),
-                Text("x${item['quantity']}", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                Text(
+                  "x${item['quantity']}",
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
               ],
             ),
           ),
-          Text("₹${item['unitPrice']}", style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+
+          Text(
+            "₹${item['unitPrice']}",
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          ),
         ],
       ),
     );
@@ -380,13 +301,28 @@ class _SummaryRow extends StatelessWidget {
     if (value != null) {
       val = (value is num) ? value.toDouble() : double.tryParse(value.toString()) ?? 0.0;
     }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: isTotal ? 16 : 14, fontWeight: isTotal ? FontWeight.bold : FontWeight.w500, color: isTotal ? Colors.black : Colors.grey[600])),
-          Text("${isDiscount ? '-' : ''}₹${val.toStringAsFixed(0)}", style: TextStyle(fontSize: isTotal ? 16 : 14, fontWeight: isTotal ? FontWeight.bold : FontWeight.w500, color: isDiscount ? Colors.green : (isTotal ? Colors.black : Colors.black87))),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isTotal ? 16 : 14,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+              color: isTotal ? Colors.black : Colors.grey[600],
+            ),
+          ),
+          Text(
+            "${isDiscount ? '-' : ''}₹${val.toStringAsFixed(0)}",
+            style: TextStyle(
+              fontSize: isTotal ? 16 : 14,
+              fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+              color: isDiscount ? Colors.green : (isTotal ? Colors.black : Colors.black87),
+            ),
+          ),
         ],
       ),
     );
@@ -403,17 +339,31 @@ class _StatusChip extends StatelessWidget {
     switch (status.toUpperCase()) {
       case 'PAID':
       case 'DELIVERED':
-      case 'SUCCESS': color = Colors.green; break;
+      case 'SUCCESS':
+        color = Colors.green;
+        break;
       case 'PENDING':
-      case 'PAYMENT_PENDING': color = Colors.orange; break;
+      case 'PAYMENT_PENDING':
+        color = Colors.orange;
+        break;
       case 'CANCELLED':
-      case 'FAILED': color = Colors.red; break;
-      default: color = Colors.grey;
+      case 'FAILED':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
     }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+      ),
     );
   }
 }
