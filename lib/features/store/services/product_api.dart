@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 class ProductApi {
   ProductApi._();
 
+  /* ================================================= */
+  /* GET OUTLET PRODUCTS                               */
+  /* ================================================= */
   static Future<List<Product>> getByOutlet(String outletId) async {
     try {
       debugPrint('🟡 PRODUCTS API → fetching for outlet=$outletId');
@@ -32,16 +35,23 @@ class ProductApi {
     }
   }
 
+  /* ================================================= */
+  /* GET ALL PUBLIC PRODUCTS                           */
+  /* ================================================= */
   static Future<List<Product>> getAllPublicProducts() async {
     try {
       debugPrint('🟡 PRODUCTS API → fetching all public products');
 
-      final Response response = await AppHttpClient.dio.post(
+      // 🔥 FIX: Changed from .post to .get to resolve the 404 error
+      // Public data listings usually require GET requests.
+      final Response response = await AppHttpClient.dio.get(
         '/public/products',
       );
 
       final List data = response.data['data'] ?? [];
       
+      debugPrint('📦 PUBLIC DATA RECEIVED → count=${data.length}');
+
       return data.map((e) {
         return Product.fromJson(Map<String, dynamic>.from(e));
       }).toList();

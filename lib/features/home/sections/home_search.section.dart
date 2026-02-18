@@ -55,7 +55,9 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
     });
 
     _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) _hideOverlay();
+      if (!_focusNode.hasFocus) {
+        _hideOverlay();
+      }
     });
   }
 
@@ -80,7 +82,8 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
   }
 
   OverlayEntry _createOverlayEntry() {
-    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return OverlayEntry(builder: (context) => const SizedBox.shrink());
     var size = renderBox.size;
 
     return OverlayEntry(
@@ -109,7 +112,7 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
   }
 
   Widget _buildSearchResults() {
-    final query = _controller.text.toLowerCase();
+    final query = _controller.text.toLowerCase().trim();
     
     final matchedCategories = widget.allCategories
         .where((c) => c.name.toLowerCase().contains(query))
@@ -131,7 +134,7 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
       padding: EdgeInsets.zero,
       children: [
         if (matchedCategories.isNotEmpty) ...[
-          _sectionHeader("Matching Categories"),
+          _sectionHeader("Categories"),
           ...matchedCategories.map((cat) => ListTile(
                 dense: true,
                 leading: const Icon(Icons.grid_view_rounded, size: 18, color: HomeColors.primaryGreen),
@@ -151,11 +154,20 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
                   width: 40, height: 40,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(image: NetworkImage(prod.mainImageUrl), fit: BoxFit.cover),
+                    color: Colors.grey[100],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      prod.mainImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, size: 20),
+                    ),
                   ),
                 ),
                 title: Text(prod.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                subtitle: Text("₹${prod.displayPrice.toInt()}", style: const TextStyle(color: HomeColors.primaryGreen, fontWeight: FontWeight.bold)),
+                subtitle: Text("₹${prod.displayPrice.toInt()}", 
+                  style: const TextStyle(color: HomeColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 12)),
                 onTap: () {
                   widget.onProductSelected?.call(prod);
                   _hideOverlay();
@@ -193,7 +205,6 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
       ),
       child: Row(
         children: [
-          /// 🔍 SEARCH BAR
           Expanded(
             child: CompositedTransformTarget(
               link: _layerLink,
@@ -237,7 +248,6 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
                       ),
                     ),
 
-                    /// Animated hint text (Only shows when controller is empty)
                     if (!_isTyping)
                       Positioned(
                         left: 48,
@@ -278,7 +288,6 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
 
           const SizedBox(width: HomeSpacing.sm),
 
-          /// 🖼️ CANE POSTER
           ClipRRect(
             borderRadius: BorderRadius.circular(HomeSpacing.radiusLg),
             child: Image.asset(
