@@ -124,12 +124,10 @@ class CategoryIconTile extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  // 🔥 Circle background also adapts to selection
+                  // 🔥 Circle background adapts to selection or image availability
                   color: isSelected 
                       ? Colors.white 
-                      : (category.imageUrl != null && category.imageUrl!.isNotEmpty
-                          ? Colors.grey.withOpacity(0.05)
-                          : iconColor.withOpacity(0.12)),
+                      : Colors.grey.withOpacity(0.05), // Light background for the image/asset
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -166,7 +164,7 @@ class CategoryIconTile extends StatelessWidget {
 }
 
 /* ================================================= */
-/* IMAGE / ICON SWITCH (UNCHANGED LOGIC)             */
+/* IMAGE / ASSET / ICON SWITCH (UPDATED)             */
 /* ================================================= */
 
 class _CategoryIcon extends StatelessWidget {
@@ -182,6 +180,7 @@ class _CategoryIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. If Network Image is provided
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipOval(
         child: Image.network(
@@ -189,19 +188,30 @@ class _CategoryIcon extends StatelessWidget {
           width: 56,
           height: 56,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Icon(
-            icon,
-            size: 28,
-            color: iconColor,
-          ),
+          errorBuilder: (_, __, ___) => _buildFallbackAsset(),
         ),
       );
     }
 
-    return Icon(
-      icon,
-      size: 28,
-      color: iconColor,
+    // 2. If no Network Image, use the local '1.png' asset
+    return _buildFallbackAsset();
+  }
+
+  // Fallback helper to keep code clean
+  Widget _buildFallbackAsset() {
+    return ClipOval(
+      child: Image.asset(
+        'assets/images/3.png',
+        width: 56,
+        height: 56,
+        fit: BoxFit.cover,
+        // If the asset itself fails (typo in path), show the icon style
+        errorBuilder: (_, __, ___) => Icon(
+          icon,
+          size: 28,
+          color: iconColor,
+        ),
+      ),
     );
   }
 }

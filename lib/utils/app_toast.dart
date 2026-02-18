@@ -50,8 +50,7 @@ class AppToast {
       case ToastType.error:
         return _darkGreen;
       case ToastType.info:
-      default:
-        return _green;
+      return _green;
     }
   }
 }
