@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Added for Provider
 import '../../home/theme/home_colors.dart';
 import '../../home/theme/home_spacing.dart';
 
@@ -6,25 +7,32 @@ import '../../home/theme/home_spacing.dart';
 import '../models/product.model.dart';
 import '../models/outlet.model.dart';
 import '../../cart/models/cart.model.dart';
-import '../../home/models/category.model.dart'; // Ensure this is imported
+import '../../home/models/category.model.dart';
+import '../../location/models/location.model.dart'; // Added
 
 // CONTROLLERS
 import '../../auth/state/auth_controller.dart';
 import '../../cart/state/cart_controller.dart';
 import '../../cart/state/local_cart_controller.dart';
+import '../../saved_address/state/saved_address_controller.dart'; // Added
+import '../../location/state/location_controller.dart'; // Added
 
 // SCREENS
 import '../../checkout/screens/checkout_screen.dart'; 
 
 // SERVICES
 import '../services/product_api.dart'; 
+import '../services/outlet_socket_service.dart'; // Added
+import '../services/outlet_verification_service.dart'; // Added
 
 // UTILS
 import '../../../utils/auth_required_action.dart'; 
+import '../../../routes.dart'; // Added
 
 // WIDGETS
 import '../widgets/product_grid_widget.dart';
 import '../widgets/product_shimmer.widget.dart';
+import '../../cart/widgets/address_selection_sheet.dart'; // Added
 
 class OutletProductsScreen extends StatefulWidget {
   final Outlet outlet;
@@ -75,9 +83,7 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
     }
   }
 
-  // 🔥 FIXED UNIQUE CATEGORY LOGIC
   List<Category> _getUniqueCategories() {
-    // We use a Map where the Key is the ID to force uniqueness
     final Map<String, Category> categoryMap = {};
     for (var product in _allProducts) {
       if (product.category.id.isNotEmpty) {
@@ -91,23 +97,19 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
     setState(() {
       List<Product> results = List.from(_allProducts);
 
-      // 1. Search Query
       if (_searchController.text.isNotEmpty) {
         results = results.where((p) => 
           p.name.toLowerCase().contains(_searchController.text.toLowerCase())).toList();
       }
 
-      // 2. Category
       if (_selectedCategoryId != 'all') {
         results = results.where((p) => p.category.id == _selectedCategoryId).toList();
       }
 
-      // 3. Trending
       if (_showTrendingOnly) {
         results = results.where((p) => p.isTrending).toList();
       }
 
-      // 4. Price Sorting
       if (_priceSort == 'low') {
         results.sort((a, b) => a.displayPrice.compareTo(b.displayPrice));
       } else if (_priceSort == 'high') {
@@ -177,7 +179,6 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
 
               SliverToBoxAdapter(child: _OutletInfoCard(outlet: widget.outlet)),
 
-              // 🔥 SEARCH & CATEGORY FILTERS
               SliverToBoxAdapter(
                 child: Container(
                   color: Colors.white,
@@ -208,7 +209,6 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
                 ),
               ),
 
-              // 🔥 ADVANCED FILTERS
               SliverToBoxAdapter(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -279,9 +279,9 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
             ],
           ),
 
-          const Positioned(
+          Positioned(
             bottom: 0, left: 0, right: 0,
-            child: _ViewCartBottomBar(),
+            child: _ViewCartBottomBar(outlet: widget.outlet), // Pass outlet
           ),
         ],
       ),
@@ -341,7 +341,154 @@ class _OutletProductsScreenState extends State<OutletProductsScreen> {
 }
 
 /* ================================================= */
-/* REMAINING HELPER WIDGETS (STILL INCLUDED)         */
+/* WIDGETS 										 */
+/* ================================================= */
+
+class _ViewCartBottomBar extends StatelessWidget {
+  final Outlet outlet;
+  const _ViewCartBottomBar({required this.outlet});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoggedIn = AuthController.instance.isLoggedIn;
+    return ValueListenableBuilder(
+      valueListenable: isLoggedIn ? CartController.instance : LocalCartController.instance,
+      builder: (context, cartValue, _) {
+        int itemCount = 0;
+        double totalPrice = 0;
+
+        if (isLoggedIn && cartValue is Cart) {
+          itemCount = cartValue.itemCount;
+          totalPrice = cartValue.grandTotal;
+        } else {
+          final items = LocalCartController.instance.items;
+          itemCount = items.fold(0, (sum, item) => sum + item.quantity);
+          totalPrice = items.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+        }
+
+        if (itemCount == 0) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: HomeColors.primaryGreen,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(color: HomeColors.primaryGreen.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
+            ],
+          ),
+          child: InkWell(
+            onTap: () => _handleCartAction(context),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$itemCount ITEMS', style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
+                    Text('₹${totalPrice.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+                const Row(
+                  children: [
+                    Text('View Cart', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                    SizedBox(width: 8),
+                    Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 22),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleCartAction(BuildContext context) async {
+    return AuthRequiredAction.run(
+      context,
+      action: () async {
+        final addressCtrl = Provider.of<SavedAddressController>(context, listen: false);
+        await addressCtrl.load(forceRefresh: true);
+
+        if (context.mounted) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: const Color(0xFFF8F9FA),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            builder: (ctx) => AddressSelectionSheet(
+              addressCtrl: addressCtrl,
+              onAddressSelected: (selectedAddress) {
+                _verifyProximityAndProceed(context, selectedAddress);
+              },
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _verifyProximityAndProceed(BuildContext context, LocationData selectedAddress) async {
+    try {
+      // Use the provided outlet from widget instead of just checking cache
+      bool isNear = OutletVerificationService.isWithinRange(
+        address: selectedAddress,
+        currentOutletLat: outlet.latitude.toString(),
+        currentOutletLng: outlet.longitude.toString(),
+      );
+
+      if (isNear) {
+        final locCtrl = Provider.of<LocationController>(context, listen: false);
+        await locCtrl.setSaved(selectedAddress);
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CheckoutScreen(initialAddressId: selectedAddress.savedAddressId!),
+            ),
+          );
+        }
+      } else {
+        _showFarOutletDialog(context, selectedAddress);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  void _showFarOutletDialog(BuildContext context, LocationData address) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Outlet is Far Away"),
+        content: const Text("This outlet is too far from your selected address. We need to clear your cart so you can switch to a closer outlet."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              CartController.instance.clear();
+              final locCtrl = Provider.of<LocationController>(context, listen: false);
+              await locCtrl.setSaved(address);
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
+              }
+            },
+            child: const Text("Clear Cart & Go Home"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ================================================= */
+/* HELPER WIDGETS (UNCHANGED) 						 */
 /* ================================================= */
 
 class _FunctionalSearchBar extends StatelessWidget {
@@ -428,72 +575,6 @@ class _EmptyStateWidget extends StatelessWidget {
           Text("No items found matching filters", style: TextStyle(color: Colors.grey[500], fontSize: 14)),
         ],
       ),
-    );
-  }
-}
-
-class _ViewCartBottomBar extends StatelessWidget {
-  const _ViewCartBottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final isLoggedIn = AuthController.instance.isLoggedIn;
-    return ValueListenableBuilder(
-      valueListenable: isLoggedIn ? CartController.instance : LocalCartController.instance,
-      builder: (context, cartValue, _) {
-        int itemCount = 0;
-        double totalPrice = 0;
-
-        if (isLoggedIn && cartValue is Cart) {
-          itemCount = cartValue.itemCount;
-          totalPrice = cartValue.grandTotal;
-        } else {
-          final items = LocalCartController.instance.items;
-          itemCount = items.fold(0, (sum, item) => sum + item.quantity);
-          totalPrice = items.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
-        }
-
-        if (itemCount == 0) return const SizedBox.shrink();
-
-        return Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: BoxDecoration(
-            color: HomeColors.primaryGreen,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: HomeColors.primaryGreen.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10)),
-            ],
-          ),
-          child: InkWell(
-            onTap: () async {
-              await AuthRequiredAction.run(context, action: () async {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
-              });
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('$itemCount ITEMS', style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700)),
-                    Text('₹${totalPrice.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
-                  ],
-                ),
-                const Row(
-                  children: [
-                    Text('View Cart', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                    SizedBox(width: 8),
-                    Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 22),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

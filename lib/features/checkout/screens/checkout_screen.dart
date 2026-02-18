@@ -13,7 +13,6 @@ import 'order_success_screen.dart';
 import '../widgets/checkout_address_card.dart';
 import '../widgets/checkout_item_list.dart';
 import '../widgets/checkout_bill_summary.dart';
-import '../widgets/address_selector_sheet.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final String? initialAddressId;
@@ -48,22 +47,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } else {
       Provider.of<SavedAddressController>(context, listen: false).load();
     }
-  }
-
-  void _showAddressPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: const AddressSelectorSheet(),
-      ),
-    );
   }
 
   /* ===================================================== */
@@ -181,7 +164,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
 
           if (summary == null) {
-            return _buildNoAddressState();
+            return const Center(child: Text("Loading Summary..."));
           }
 
           return SingleChildScrollView(
@@ -189,9 +172,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 horizontal: 16, vertical: 20),
             child: Column(
               children: [
+                // 🔥 Address is now display-only
                 CheckoutAddressCard(
                   addressText: summary.addressText,
-                  onTap: _showAddressPicker,
+                  onTap: () {}, // Pass empty function to disable clicking
                 ),
                 const SizedBox(height: 20),
                 CheckoutItemList(items: summary.items),
@@ -233,65 +217,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             return const SizedBox.shrink();
           return _buildBottomBar(summary);
         },
-      ),
-    );
-  }
-
-  Widget _buildNoAddressState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment:
-              MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                  Icons.location_disabled_rounded,
-                  size: 48,
-                  color: Colors.grey.shade400),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "Missing Delivery Location",
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Please select a delivery address to calculate shipping and taxes.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _showAddressPicker,
-                icon: const Icon(
-                    Icons.add_location_alt_outlined),
-                label: const Text("Select Address"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      HomeColors.primaryGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-              ),
-            )
-          ],
-        ),
       ),
     );
   }
@@ -372,8 +297,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         )
                       : const Row(
                           mainAxisAlignment:
-                              MainAxisAlignment
-                                  .center,
+                              MainAxisAlignment.center,
                           children: [
                             Text(
                               "PLACE ORDER",

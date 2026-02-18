@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 // THEME
 import '../../home/theme/home_colors.dart';
@@ -7,23 +8,32 @@ import '../../home/theme/home_text_styles.dart';
 
 // MODELS
 import '../models/product.model.dart';
-import '../../cart/models/cart.model.dart'; // ⭐ Added for Cart Logic
+import '../../cart/models/cart.model.dart';
+import '../../location/models/location.model.dart';
 
 // CONTROLLERS
-import '../../auth/state/auth_controller.dart'; // ⭐ Added
-import '../../cart/state/cart_controller.dart'; // ⭐ Added
-import '../../cart/state/local_cart_controller.dart'; // ⭐ Added
+import '../../auth/state/auth_controller.dart';
+import '../../cart/state/cart_controller.dart';
+import '../../cart/state/local_cart_controller.dart';
+import '../../saved_address/state/saved_address_controller.dart';
+import '../../location/state/location_controller.dart';
 
 // SCREENS
-import '../../checkout/screens/checkout_screen.dart'; // ⭐ Added
+import '../../checkout/screens/checkout_screen.dart';
+
+// SERVICES
+import '../services/outlet_socket_service.dart';
+import '../services/outlet_verification_service.dart';
 
 // UTILS
-import '../../../utils/auth_required_action.dart'; // ⭐ Added
+import '../../../utils/auth_required_action.dart';
+import '../../../routes.dart';
 
 // WIDGETS
 import '../widgets/product_add_button.dart';
 import '../widgets/product_image_gallery.dart';
 import '../widgets/product_price_view.dart';
+import '../../cart/widgets/address_selection_sheet.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final Product product;
@@ -54,7 +64,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Scaffold(
       backgroundColor: HomeColors.pureWhite,
       
-      // --- APP BAR ---
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -85,14 +94,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         ),
       ),
 
-      // --- BODY WITH STACK (For Floating Cart Bar) ---
       body: Stack(
         children: [
-          // 1. SCROLLABLE CONTENT
           CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Image Gallery
               SliverToBoxAdapter(
                 child: Hero(
                   tag: 'product-${_product.id}',
@@ -104,7 +110,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 ),
               ),
 
-              // Content Details
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: HomeSpacing.md,
@@ -123,27 +128,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ],
 
                     _DescriptionSection(product: _product),
-                    
-                    // Extra space at bottom so text isn't hidden by the floating bars
-                    const SizedBox(height: 120), 
+                    const SizedBox(height: 150), 
                   ]),
                 ),
               ),
             ],
           ),
 
-          // 2. FLOATING CART BAR (⭐ NEW)
-          // It sits at bottom: 0 of the body, which is right above the bottomNavigationBar
-          const Positioned(
+          Positioned(
             bottom: 0, 
             left: 0, 
             right: 0,
-            child: _ViewCartFloatingBar(),
+            child: _ViewCartFloatingBar(outletId: widget.outletId),
           ),
         ],
       ),
 
-      // --- BOTTOM BAR (Add to Cart) ---
       bottomNavigationBar: _BottomAddBar(
         product: _product,
         outletId: widget.outletId,
@@ -153,24 +153,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 }
 
 /* ================================================= */
-/* FLOATING CART BAR (⭐ NEW)                        */
+/* FLOATING CART BAR 								 */
 /* ================================================= */
 
 class _ViewCartFloatingBar extends StatelessWidget {
-  const _ViewCartFloatingBar();
+  final String outletId;
+  const _ViewCartFloatingBar({required this.outletId});
 
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = AuthController.instance.isLoggedIn;
     
-    // Listen to Cart changes
     return ValueListenableBuilder(
       valueListenable: isLoggedIn ? CartController.instance : LocalCartController.instance,
       builder: (context, cartValue, _) {
         int itemCount = 0;
         double totalPrice = 0;
 
-        // Calculate totals
         if (isLoggedIn && cartValue is Cart) {
           itemCount = cartValue.itemCount;
           totalPrice = cartValue.grandTotal;
@@ -180,13 +179,10 @@ class _ViewCartFloatingBar extends StatelessWidget {
           totalPrice = items.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
         }
 
-        // Hide if empty
         if (itemCount == 0) return const SizedBox.shrink();
 
-        // Show the floating bar
         return Container(
-          // Margin ensures it floats slightly above the bottom "Add" bar
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: HomeColors.primaryGreen,
@@ -200,11 +196,7 @@ class _ViewCartFloatingBar extends StatelessWidget {
             ],
           ),
           child: InkWell(
-            onTap: () async {
-              await AuthRequiredAction.run(context, action: () async {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CheckoutScreen()));
-              });
-            },
+            onTap: () => _handleCheckoutValidation(context),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -252,10 +244,98 @@ class _ViewCartFloatingBar extends StatelessWidget {
       },
     );
   }
+
+  Future<void> _handleCheckoutValidation(BuildContext context) async {
+    return AuthRequiredAction.run(
+      context,
+      action: () async {
+        final addressCtrl = Provider.of<SavedAddressController>(context, listen: false);
+        await addressCtrl.load(forceRefresh: true);
+
+        if (context.mounted) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: const Color(0xFFF8F9FA),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            builder: (ctx) => AddressSelectionSheet(
+              addressCtrl: addressCtrl,
+              onAddressSelected: (selectedAddress) {
+                _verifyProximityAndProceed(context, selectedAddress);
+              },
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _verifyProximityAndProceed(BuildContext context, LocationData selectedAddress) async {
+    try {
+      final outletSocket = OutletSocketService.instance;
+      
+      if (outletSocket.cachedOutlets.isEmpty) throw "Outlet data not available.";
+
+      final currentOutlet = outletSocket.cachedOutlets.firstWhere(
+        (o) => o.id == outletId,
+        orElse: () => outletSocket.cachedOutlets.first,
+      );
+
+      bool isNear = OutletVerificationService.isWithinRange(
+        address: selectedAddress,
+        currentOutletLat: currentOutlet.latitude.toString(),
+        currentOutletLng: currentOutlet.longitude.toString(),
+      );
+
+      if (isNear) {
+        final locCtrl = Provider.of<LocationController>(context, listen: false);
+        await locCtrl.setSaved(selectedAddress);
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CheckoutScreen(initialAddressId: selectedAddress.savedAddressId!),
+            ),
+          );
+        }
+      } else {
+        _showFarOutletDialog(context, selectedAddress);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  void _showFarOutletDialog(BuildContext context, LocationData address) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Outlet is Far Away"),
+        content: const Text("This outlet is too far from your selected address. We need to clear your cart so you can switch to a closer outlet."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              CartController.instance.clear();
+              final locCtrl = Provider.of<LocationController>(context, listen: false);
+              await locCtrl.setSaved(address);
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
+              }
+            },
+            child: const Text("Clear Cart & Go Home"),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /* ================================================= */
-/* SECTIONS (Unchanged)                              */
+/* SECTIONS 										 */
 /* ================================================= */
 
 class _HeaderSection extends StatelessWidget {
@@ -420,7 +500,6 @@ class _BottomAddBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // This bar is fixed at the bottom of the screen
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: HomeSpacing.md,
