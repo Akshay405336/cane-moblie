@@ -97,8 +97,8 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
             elevation: 12,
             borderRadius: BorderRadius.circular(16),
             color: Colors.white,
+            // 🔥 REMOVED rigid maxHeight, added natural wrapping with a smaller limit
             child: Container(
-              constraints: const BoxConstraints(maxHeight: 350),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.withOpacity(0.2)),
@@ -129,61 +129,67 @@ class _HomeSearchSectionState extends State<HomeSearchSection> {
       );
     }
 
-    return ListView(
-      shrinkWrap: true,
-      padding: EdgeInsets.zero,
-      children: [
-        if (matchedCategories.isNotEmpty) ...[
-          _sectionHeader("Categories"),
-          ...matchedCategories.map((cat) => ListTile(
-                dense: true,
-                leading: const Icon(Icons.grid_view_rounded, size: 18, color: HomeColors.primaryGreen),
-                title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                onTap: () {
-                  widget.onCategorySelected?.call(cat.id);
-                  _controller.clear();
-                  _onChanged('');
-                  _focusNode.unfocus();
-                },
-              )),
-        ],
-        if (matchedProducts.isNotEmpty) ...[
-          _sectionHeader("Products"),
-          ...matchedProducts.map((prod) => ListTile(
-                leading: Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey[100],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      prod.mainImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, size: 20),
+    // 🔥 Added ConstrainedBox to handle dynamic height for 2-3 items
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 280), 
+      child: ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        children: [
+          if (matchedCategories.isNotEmpty) ...[
+            _sectionHeader("Categories"),
+            ...matchedCategories.map((cat) => ListTile(
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  leading: const Icon(Icons.grid_view_rounded, size: 18, color: HomeColors.primaryGreen),
+                  title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  onTap: () {
+                    widget.onCategorySelected?.call(cat.id);
+                    _controller.clear();
+                    _onChanged('');
+                    _focusNode.unfocus();
+                  },
+                )),
+          ],
+          if (matchedProducts.isNotEmpty) ...[
+            _sectionHeader("Products"),
+            ...matchedProducts.map((prod) => ListTile(
+                  dense: true,
+                  leading: Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[100],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        prod.mainImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, size: 18),
+                      ),
                     ),
                   ),
-                ),
-                title: Text(prod.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                subtitle: Text("₹${prod.displayPrice.toInt()}", 
-                  style: const TextStyle(color: HomeColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 12)),
-                onTap: () {
-                  widget.onProductSelected?.call(prod);
-                  _hideOverlay();
-                  _focusNode.unfocus();
-                },
-              )),
+                  title: Text(prod.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: Text("₹${prod.displayPrice.toInt()}", 
+                    style: const TextStyle(color: HomeColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 11)),
+                  onTap: () {
+                    widget.onProductSelected?.call(prod);
+                    _hideOverlay();
+                    _focusNode.unfocus();
+                  },
+                )),
+          ],
         ],
-      ],
+      ),
     );
   }
 
   Widget _sectionHeader(String title) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: Colors.grey[50],
-      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 0.5)),
+      child: Text(title.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 0.5)),
     );
   }
 
