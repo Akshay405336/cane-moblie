@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import '../models/category.model.dart';
 import '../theme/home_spacing.dart';
 import '../theme/home_text_styles.dart';
+import '../theme/home_colors.dart'; // Ensure HomeColors.primaryGreen is defined here
 
 class CategoryListWidget extends StatelessWidget {
   final List<Category> categories;
+  final String selectedCategoryId; // 🔥 Track which category is selected
   final void Function(Category category)? onTap;
 
   const CategoryListWidget({
     super.key,
     required this.categories,
+    required this.selectedCategoryId, // 🔥 Required for filtering logic
     this.onTap,
   });
 
@@ -19,16 +22,13 @@ class CategoryListWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Calculate dynamic width for 3 items per row
-    // ScreenWidth - (Horizontal Padding * 2) - (Separators * 2) / 3
     final screenWidth = MediaQuery.of(context).size.width;
     final itemWidth = (screenWidth - (HomeSpacing.md * 2) - (HomeSpacing.md * 2)) / 3.2;
 
     return Padding(
       padding: const EdgeInsets.only(top: HomeSpacing.sm),
       child: SizedBox(
-        // Increased height for larger boxes
-        height: 150, 
+        height: 150,
         child: ListView.separated(
           key: const PageStorageKey('category-list'),
           scrollDirection: Axis.horizontal,
@@ -36,18 +36,21 @@ class CategoryListWidget extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(
             horizontal: HomeSpacing.md,
-            vertical: 12, 
+            vertical: 12,
           ),
           itemCount: categories.length,
           separatorBuilder: (_, __) =>
               const SizedBox(width: HomeSpacing.md),
           itemBuilder: (context, index) {
             final category = categories[index];
+            // 🔥 Check if this specific tile is the selected one
+            final isSelected = category.id == selectedCategoryId;
 
             return CategoryIconTile(
               key: ValueKey(category.id),
               category: category,
-              width: itemWidth, // Pass the calculated width
+              width: itemWidth,
+              isSelected: isSelected, // 🔥 Pass selection state
               onTap: onTap == null
                   ? null
                   : () => onTap!(category),
@@ -60,18 +63,20 @@ class CategoryListWidget extends StatelessWidget {
 }
 
 /* ================================================= */
-/* CATEGORY ICON TILE (ADAPTIVE HEIGHT)              */
+/* CATEGORY ICON TILE (ZEPTO STYLE SELECTION)        */
 /* ================================================= */
 
 class CategoryIconTile extends StatelessWidget {
   final Category category;
   final double width;
+  final bool isSelected; // 🔥 Selection state
   final VoidCallback? onTap;
 
   const CategoryIconTile({
     super.key,
     required this.category,
     required this.width,
+    required this.isSelected,
     this.onTap,
   });
 
@@ -80,24 +85,31 @@ class CategoryIconTile extends StatelessWidget {
     final iconColor = _CategoryStyle.iconColorFor(category.id);
     final icon = _CategoryStyle.iconFor(category.id);
 
+    // 🔥 Zepto-style active colors
+    final activeBg = HomeColors.primaryGreen.withOpacity(0.12);
+    final activeBorder = HomeColors.primaryGreen.withOpacity(0.4);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: width, // Dynamic width for 3 per row
+        child: AnimatedContainer( // 🔥 Added animation for selection transition
+          duration: const Duration(milliseconds: 250),
+          width: width,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            // 🔥 Change background if selected
+            color: isSelected ? activeBg : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.grey.withOpacity(0.1),
-              width: 1.2,
+              // 🔥 Thicker brand border if selected
+              color: isSelected ? activeBorder : Colors.grey.withOpacity(0.1),
+              width: isSelected ? 2.0 : 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1D1617).withOpacity(0.08),
+                color: const Color(0xFF1D1617).withOpacity(isSelected ? 0.12 : 0.08),
                 offset: const Offset(0, 10),
                 blurRadius: 20,
                 spreadRadius: -2,
@@ -108,26 +120,26 @@ class CategoryIconTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Larger Icon Container
               Container(
-                width: 56, // Increased from 48
-                height: 56, // Increased from 48
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: category.imageUrl != null && category.imageUrl!.isNotEmpty
-                      ? Colors.grey.withOpacity(0.05)
-                      : iconColor.withOpacity(0.12),
+                  // 🔥 Circle background also adapts to selection
+                  color: isSelected 
+                      ? Colors.white 
+                      : (category.imageUrl != null && category.imageUrl!.isNotEmpty
+                          ? Colors.grey.withOpacity(0.05)
+                          : iconColor.withOpacity(0.12)),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: _CategoryIcon(
                   imageUrl: category.imageUrl,
                   icon: icon,
-                  iconColor: iconColor,
+                  iconColor: isSelected ? HomeColors.primaryGreen : iconColor,
                 ),
               ),
               const SizedBox(height: 12),
-              
-              // Text with slightly larger font
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: Text(
@@ -136,10 +148,11 @@ class CategoryIconTile extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: HomeTextStyles.body.copyWith(
-                    fontSize: 13, // Increased from 12
+                    fontSize: 13,
                     height: 1.1,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    // 🔥 Bold and Brand Color if selected
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                    color: isSelected ? HomeColors.primaryGreen : Colors.black87,
                     letterSpacing: 0.1,
                   ),
                 ),
@@ -153,7 +166,7 @@ class CategoryIconTile extends StatelessWidget {
 }
 
 /* ================================================= */
-/* IMAGE / ICON SWITCH                               */
+/* IMAGE / ICON SWITCH (UNCHANGED LOGIC)             */
 /* ================================================= */
 
 class _CategoryIcon extends StatelessWidget {
@@ -178,7 +191,7 @@ class _CategoryIcon extends StatelessWidget {
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Icon(
             icon,
-            size: 28, // Increased icon size
+            size: 28,
             color: iconColor,
           ),
         ),
@@ -187,14 +200,14 @@ class _CategoryIcon extends StatelessWidget {
 
     return Icon(
       icon,
-      size: 28, // Increased icon size
+      size: 28,
       color: iconColor,
     );
   }
 }
 
 /* ================================================= */
-/* CATEGORY STYLE ENGINE                             */
+/* CATEGORY STYLE ENGINE (UNCHANGED LOGIC)           */
 /* ================================================= */
 
 class _CategoryStyle {

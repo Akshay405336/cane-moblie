@@ -8,45 +8,52 @@ class CategoryShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 Match the dynamic width calculation from your CategoryListWidget
+    final screenWidth = MediaQuery.of(context).size.width;
+    final itemWidth = (screenWidth - (HomeSpacing.md * 2) - (HomeSpacing.md * 2)) / 3.2;
+
     return SizedBox(
-      height: 110,
+      height: 150, // 🔥 Match the actual CategoryListWidget height
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
           horizontal: HomeSpacing.md,
+          vertical: 12, // 🔥 Match the vertical padding
         ),
         itemCount: 5,
         separatorBuilder: (_, __) =>
-            const SizedBox(width: HomeSpacing.sm),
+            const SizedBox(width: HomeSpacing.md), // 🔥 Match the md spacing
         itemBuilder: (_, __) {
           return Shimmer.fromColors(
             baseColor: HomeColors.lightGrey,
-            highlightColor: HomeColors.creamyWhite,
+            highlightColor: HomeColors.pureWhite.withOpacity(0.5),
             child: Container(
-              width: 88,
+              width: itemWidth, // 🔥 Match the dynamic width
               decoration: BoxDecoration(
                 color: HomeColors.lightGrey,
-                borderRadius: BorderRadius.circular(
-                  HomeSpacing.radiusLg,
-                ),
+                borderRadius: BorderRadius.circular(24), // 🔥 Match the tile radius
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Circle Icon Shimmer
                   Container(
-                    height: 44,
-                    width: 44,
-                    decoration: BoxDecoration(
-                      color: HomeColors.pureWhite,
-                      borderRadius:
-                          BorderRadius.circular(12),
+                    height: 56, // 🔥 Match the increased 56px size
+                    width: 56,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  // Text Label Shimmer
                   Container(
-                    height: 10,
-                    width: 50,
-                    color: HomeColors.pureWhite,
+                    height: 12,
+                    width: itemWidth * 0.6,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ],
               ),

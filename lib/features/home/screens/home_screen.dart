@@ -29,6 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Category> _categories = [];
   bool _loadingCategories = true;
+  
+  // 🔥 NEW: Track the selected category (default to 'all')
+  String _selectedCategoryId = 'all';
 
   /* ================= OUTLETS ================= */
 
@@ -47,21 +50,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final cachedCategories = CategorySocketService.cachedCategories;
 
     if (cachedCategories.isNotEmpty) {
-      _categories = cachedCategories;
+      _categories = _injectAllCategory(cachedCategories); // 🔥 Inject "All"
       _loadingCategories = false;
     }
 
     CategorySocketService.connect();
     
-    // ⭐ UPDATED: Use .instance for subscription
     OutletSocketService.instance.subscribe(_onOutlets);
+  }
+
+  /// 🔥 Helper to add the "All" category at the start of the list
+  List<Category> _injectAllCategory(List<Category> incoming) {
+    final allCategory = Category(
+      id: 'all',
+      name: 'All',// You can add a local asset path here if needed
+    );
+    
+    // Check if it already exists to avoid duplicates
+    if (incoming.any((c) => c.id == 'all')) return incoming;
+    return [allCategory, ...incoming];
   }
 
   void _connectOutletSocket(double lat, double lng) {
     debugPrint('🚀 Connect outlets → $lat,$lng');
     setState(() => _loadingOutlets = true);
     
-    // ⭐ UPDATED: Use .instance for singleton access
     OutletSocketService.instance.disconnect();
     OutletSocketService.instance.connect(lat: lat, lng: lng);
   }
@@ -70,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     debugPrint('📦 Categories received: ${categories.length}');
     setState(() {
-      _categories = categories;
+      _categories = _injectAllCategory(categories); // 🔥 Inject "All"
       _loadingCategories = false;
     });
   }
@@ -78,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onOutlets(List<Outlet> outlets) {
     if (!mounted) return;
     
-    // Backend returns outlets based on radius, but we filter for 6km here
     final nearby = outlets.where((o) {
       if (o.distanceKm == null) return false;
       return o.distanceKm! <= 6;
@@ -94,8 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     CategorySocketService.unsubscribe(_onCategories);
-    
-    // ⭐ UPDATED: Use .instance for unsubscribe
     OutletSocketService.instance.unsubscribe(_onOutlets);
     super.dispose();
   }
@@ -106,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final lat = location.current?.latitude;
     final lng = location.current?.longitude;
 
-    // Detect location change to reconnect socket
     if (lat != null && lng != null && (_lastLat != lat || _lastLng != lng)) {
       _lastLat = lat;
       _lastLng = lng;
@@ -143,16 +152,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
               /* CATEGORIES */
               const SizedBox(height: HomeSpacing.lg),
+              // 🔥 UPDATED: Pass selected ID and a callback to update it
               HomeCategoriesSection(
                 loading: _loadingCategories,
                 categories: _categories,
+                selectedCategoryId: _selectedCategoryId,
+                onCategoryTap: (category) {
+                  setState(() {
+                    _selectedCategoryId = category.id;
+                  });
+                  debugPrint('🎯 Selected Category: ${category.name}');
+                },
               ),
 
               /* OUTLETS */
               const SizedBox(height: HomeSpacing.xl),
+              // 🔥 UPDATED: Pass the selectedCategoryId to the outlets section for filtering
               HomeOutletsSection(
                 loading: _loadingOutlets,
                 outlets: _outlets,
+                selectedCategoryId: _selectedCategoryId,
               ),
             ],
           ),

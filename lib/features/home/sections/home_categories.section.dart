@@ -10,11 +10,16 @@ import '../theme/home_colors.dart';
 class HomeCategoriesSection extends StatelessWidget {
   final bool loading;
   final List<Category> categories;
+  // 🔥 NEW: Selection state and callback
+  final String selectedCategoryId;
+  final Function(Category) onCategoryTap;
 
   const HomeCategoriesSection({
     super.key,
     required this.loading,
     required this.categories,
+    required this.selectedCategoryId, // 🔥 Required for filtering
+    required this.onCategoryTap,      // 🔥 Required for updates
   });
 
   @override
@@ -34,6 +39,10 @@ class HomeCategoriesSection extends StatelessWidget {
               : CategoryListWidget(
                   key: const ValueKey('category-list'),
                   categories: categories,
+                  // 🔥 Pass the current selection to the list
+                  selectedCategoryId: selectedCategoryId,
+                  // 🔥 Handle the tap to update selection
+                  onTap: onCategoryTap,
                 ),
         ),
       ],

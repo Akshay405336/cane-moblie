@@ -14,19 +14,24 @@ class Category {
   });
 
   /* ================================================= */
-  /* JSON                                              */
+  /* JSON → CATEGORY (🔥 UPDATED FOR FLEXIBILITY)      */
   /* ================================================= */
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      imagePath: json['imagePath'] as String?,
+      // Ensure ID is always a String
+      id: (json['id'] ?? '').toString(),
+      
+      // Support 'name' or 'categoryName'
+      name: json['name']?.toString() ?? json['categoryName']?.toString() ?? 'General',
+      
+      // 🔥 FIX: Backend uses 'imagePath' in sockets but 'image' in product nested objects
+      imagePath: json['imagePath']?.toString() ?? json['image']?.toString(),
     );
   }
 
   /* ================================================= */
-  /* ⭐ SAFE EMPTY CATEGORY (NEW)                       */
+  /* ⭐ SAFE EMPTY CATEGORY                            */
   /* ================================================= */
 
   factory Category.empty() {
@@ -52,8 +57,15 @@ class Category {
     if (imagePath == null || imagePath!.isEmpty) {
       return null;
     }
+    
+    // If it's already a full URL, return it
+    if (imagePath!.startsWith('http')) return imagePath;
 
-    return '${Env.baseUrl}/$imagePath';
+    // Clean slashes to prevent double-slash errors
+    final cleanBase = Env.baseUrl.replaceAll(RegExp(r'/$'), '');
+    final cleanPath = imagePath!.replaceAll(RegExp(r'^/'), '');
+
+    return '$cleanBase/$cleanPath';
   }
 
   Category copyWith({

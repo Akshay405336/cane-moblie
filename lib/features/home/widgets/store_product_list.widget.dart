@@ -2,7 +2,6 @@ import 'package:caneandtender/features/store/screens/outlet_products_screen.dart
 import 'package:caneandtender/features/store/screens/product_details.screen.dart';
 import 'package:flutter/material.dart';
 
-
 // MODELS
 import '../../store/models/outlet.model.dart';
 import '../../store/models/product.model.dart';
@@ -19,10 +18,12 @@ import '../theme/home_text_styles.dart';
 
 class StoreWithProductsWidget extends StatefulWidget {
   final Outlet outlet;
+  final String selectedCategoryId; // 🔥 Selection tracking from Home Screen
 
   const StoreWithProductsWidget({
     super.key,
     required this.outlet,
+    required this.selectedCategoryId, // 🔥 Required for Zepto-style filtering
   });
 
   @override
@@ -30,7 +31,8 @@ class StoreWithProductsWidget extends StatefulWidget {
 }
 
 class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
-  List<Product> _products = [];
+  List<Product> _allProducts = []; // Store all products fetched from API
+  List<Product> _filteredProducts = []; // List actually displayed to user
   bool _loading = true;
 
   @override
@@ -39,12 +41,22 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
     _fetchProducts();
   }
 
+  // 🔥 DETECT CATEGORY CHANGE: This ensures products update instantly when you tap a category
+  @override
+  void didUpdateWidget(covariant StoreWithProductsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedCategoryId != widget.selectedCategoryId) {
+      _applyFilter();
+    }
+  }
+
   Future<void> _fetchProducts() async {
     try {
       final allProducts = await ProductApi.getByOutlet(widget.outlet.id);
       if (mounted) {
         setState(() {
-          _products = allProducts.take(5).toList();
+          _allProducts = allProducts;
+          _applyFilter(); // Apply initial filter
           _loading = false;
         });
       }
@@ -52,6 +64,29 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
       debugPrint("❌ Error loading products for store: $e");
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // 🔥 FILTER LOGIC: Robust comparison with normalization
+  void _applyFilter() {
+    setState(() {
+      // Normalize the selected ID to ensure comparison works
+      final selectedId = widget.selectedCategoryId.toString().trim();
+
+      if (selectedId == 'all' || selectedId.isEmpty) {
+        // Show everything if 'all' is selected
+        _filteredProducts = _allProducts.toList();
+      } else {
+        // 🔥 Filter products by matching the Category ID exactly
+        _filteredProducts = _allProducts.where((product) {
+          final productCatId = product.category.id.toString().trim();
+          
+          // Matches the selected ID (e.g. f9cf5a27...)
+          return productCatId == selectedId;
+        }).toList();
+      }
+      
+      debugPrint('✅ Filter Applied | Store: ${widget.outlet.name} | Category: $selectedId | Found: ${_filteredProducts.length}');
+    });
   }
 
   @override
@@ -87,7 +122,7 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
               ),
             ),
           )
-        else if (_products.isEmpty)
+        else if (_filteredProducts.isEmpty)
           /* ================= ANIMATED NO PRODUCTS STATE ================= */
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
@@ -128,7 +163,7 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          "No products available yet",
+                          "No products in this category",
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -137,7 +172,7 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Check back later or explore other stores",
+                          "Try switching back to 'All' or other categories",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
@@ -159,11 +194,11 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              itemCount: _products.length,
+              itemCount: _filteredProducts.length,
               separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
                 return _MiniProductCard(
-                  product: _products[index],
+                  product: _filteredProducts[index],
                   outletId: widget.outlet.id,
                 );
               },
@@ -177,7 +212,7 @@ class _StoreWithProductsWidgetState extends State<StoreWithProductsWidget> {
 }
 
 /* ================================================= */
-/* UPDATED PREMIUM OUTLET HEADER DESIGN             */
+/* PREMIUM OUTLET HEADER DESIGN                     */
 /* ================================================= */
 
 class _PremiumOutletHeader extends StatelessWidget {
@@ -289,7 +324,7 @@ class _PremiumOutletHeader extends StatelessWidget {
 }
 
 /* ================================================= */
-/* MINI PRODUCT CARD - UPDATED WITH NAVIGATION      */
+/* MINI PRODUCT CARD - UPDATED WITH TRENDING LOGIC  */
 /* ================================================= */
 
 class _MiniProductCard extends StatelessWidget {
@@ -319,7 +354,6 @@ class _MiniProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
-            // ⭐ Wrap content in InkWell for navigation
             InkWell(
               onTap: () {
                 Navigator.push(
@@ -382,7 +416,6 @@ class _MiniProductCard extends StatelessWidget {
                 ],
               ),
             ),
-            // The Add button remains on top and handles its own clicks
             Positioned(
               bottom: 8,
               right: 8,
@@ -392,6 +425,28 @@ class _MiniProductCard extends StatelessWidget {
                 onTap: () {},
               ),
             ),
+            
+            if (product.isTrending) 
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: HomeColors.discountRed,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.whatshot_rounded, 
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
             if (product.hasDiscount)
               Positioned(
                 top: 0,

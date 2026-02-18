@@ -11,18 +11,21 @@ import '../theme/home_text_styles.dart';
 class HomeOutletsSection extends StatelessWidget {
   final bool loading;
   final List<Outlet> outlets;
+  // 🔥 NEW: Selection state passed from HomeScreen
+  final String selectedCategoryId;
 
   const HomeOutletsSection({
     super.key,
     required this.loading,
     required this.outlets,
+    required this.selectedCategoryId, // 🔥 Required for product filtering
   });
 
   @override
   Widget build(BuildContext context) {
     // ⭐ DEBUG LOG (very useful)
     debugPrint(
-      '🏪 HomeOutletsSection → loading=$loading | outlets=${outlets.length}',
+      '🏪 HomeOutletsSection → loading=$loading | outlets=${outlets.length} | filter=$selectedCategoryId',
     );
 
     return Column(
@@ -75,8 +78,11 @@ class HomeOutletsSection extends StatelessWidget {
               itemBuilder: (_, index) {
                 final outlet = outlets[index];
 
-                // ⭐ UPDATED: Using the new Store+Product wrapper
-                return StoreWithProductsWidget(outlet: outlet);
+                // ⭐ UPDATED: Passing the selectedCategoryId to enable local product filtering
+                return StoreWithProductsWidget(
+                  outlet: outlet,
+                  selectedCategoryId: selectedCategoryId, 
+                );
               },
             ),
           ),

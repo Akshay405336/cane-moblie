@@ -6,36 +6,48 @@ import 'package:flutter/foundation.dart';
 class ProductApi {
   ProductApi._();
 
-  /* ================================================= */
-  /* GET OUTLET PRODUCTS                               */
-  /* ================================================= */
+  static Future<List<Product>> getByOutlet(String outletId) async {
+    try {
+      debugPrint('🟡 PRODUCTS API → fetching for outlet=$outletId');
 
-  static Future<List<Product>> getByOutlet(
-    String outletId,
-  ) async {
-    debugPrint('🟡 PRODUCTS API → fetching for outlet=$outletId');
+      final Response response = await AppHttpClient.dio.get(
+        '/public/outlets/$outletId/products',
+      );
 
-    final Response response =
-        await AppHttpClient.dio.get(
-      '/public/outlets/$outletId/products',
-    );
+      final List data = response.data['data'] ?? [];
+      
+      return data.map((e) {
+        final mapData = Map<String, dynamic>.from(e);
+        
+        // 🔥 DEBUG LOG: Confirming structural data
+        if (mapData['category'] != null) {
+          debugPrint('🎯 Found Category Map: ${mapData['category']}');
+        }
 
-    debugPrint('📦 RAW RESPONSE => ${response.data}');
+        return Product.fromJson(mapData);
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ API ERROR (getByOutlet): $e');
+      return [];
+    }
+  }
 
-    final List data = response.data['data'] ?? [];
+  static Future<List<Product>> getAllPublicProducts() async {
+    try {
+      debugPrint('🟡 PRODUCTS API → fetching all public products');
 
-    debugPrint('📦 DATA LENGTH => ${data.length}');
+      final Response response = await AppHttpClient.dio.post(
+        '/public/products',
+      );
 
-    final products = data
-        .map(
-          (e) => Product.fromJson(
-            Map<String, dynamic>.from(e),
-          ),
-        )
-        .toList();
-
-    debugPrint('✅ PARSED PRODUCTS => ${products.length}');
-
-    return products;
+      final List data = response.data['data'] ?? [];
+      
+      return data.map((e) {
+        return Product.fromJson(Map<String, dynamic>.from(e));
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ API ERROR (getAllPublicProducts): $e');
+      return [];
+    }
   }
 }

@@ -8,7 +8,7 @@ class Env {
   /// PROD: real domain
   static const String baseUrl = isProd
       ? 'https://api.yourdomain.com'
-      : 'https://pointed-closest-sao-constitution.trycloudflare.com';
+      : 'https://consistency-pennsylvania-quote-isbn.trycloudflare.com';
   /// App name
   static const String appName = 'Cane & Tender';
 }
