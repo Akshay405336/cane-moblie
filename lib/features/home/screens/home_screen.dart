@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../models/category.model.dart';
 import '../../store/models/outlet.model.dart';
+import '../../store/models/product.model.dart'; // 🔥 Added Product Model
 
 import '../services/category_socket_service.dart';
 import '../../store/services/outlet_socket_service.dart';
+import '../../store/services/product_api.dart'; // 🔥 Added Product API
 
 import '../../location/state/location_controller.dart';
 
@@ -13,6 +15,7 @@ import '../sections/home_search.section.dart';
 import '../sections/home_categories.section.dart';
 import '../sections/home_outlets.section.dart';
 import '../widgets/home_top_banner.dart'; 
+import '../../store/screens/product_details.screen.dart'; // 🔥 Added for direct navigation
 
 import '../theme/home_colors.dart';
 import '../theme/home_spacing.dart';
@@ -30,8 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Category> _categories = [];
   bool _loadingCategories = true;
   
-  // 🔥 NEW: Track the selected category (default to 'all')
+  // Track the selected category (default to 'all')
   String _selectedCategoryId = 'all';
+
+  /* ================= SEARCH DATA ================= */
+  
+  List<Product> _allSearchableProducts = []; // 🔥 Store products for search logic
 
   /* ================= OUTLETS ================= */
 
@@ -50,23 +57,38 @@ class _HomeScreenState extends State<HomeScreen> {
     final cachedCategories = CategorySocketService.cachedCategories;
 
     if (cachedCategories.isNotEmpty) {
-      _categories = _injectAllCategory(cachedCategories); // 🔥 Inject "All"
+      _categories = _injectAllCategory(cachedCategories);
       _loadingCategories = false;
     }
 
     CategorySocketService.connect();
-    
     OutletSocketService.instance.subscribe(_onOutlets);
+
+    // 🔥 PRE-FETCH all products to make the Home Search functional
+    _fetchSearchData();
+  }
+
+  /// 🔥 Fetch global products to allow searching by product name
+  Future<void> _fetchSearchData() async {
+    try {
+      final products = await ProductApi.getAllPublicProducts();
+      if (mounted) {
+        setState(() {
+          _allSearchableProducts = products;
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ Error pre-fetching products for search: $e");
+    }
   }
 
   /// 🔥 Helper to add the "All" category at the start of the list
   List<Category> _injectAllCategory(List<Category> incoming) {
     final allCategory = Category(
       id: 'all',
-      name: 'All',// You can add a local asset path here if needed
+      name: 'All',
     );
     
-    // Check if it already exists to avoid duplicates
     if (incoming.any((c) => c.id == 'all')) return incoming;
     return [allCategory, ...incoming];
   }
@@ -83,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     debugPrint('📦 Categories received: ${categories.length}');
     setState(() {
-      _categories = _injectAllCategory(categories); // 🔥 Inject "All"
+      _categories = _injectAllCategory(categories); 
       _loadingCategories = false;
     });
   }
@@ -140,19 +162,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Color(0xFFF3FBF5),
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
-                    SizedBox(height: HomeSpacing.sm),
-                    HomeSearchSection(),
-                    SizedBox(height: HomeSpacing.md),
-                    HomeTopBanner(),
+                    const SizedBox(height: HomeSpacing.sm),
+                    
+                    // 🔥 UPDATED: Pass data and callbacks to the Search Section
+                    HomeSearchSection(
+                      allProducts: _allSearchableProducts,
+                      allCategories: _categories.where((c) => c.id != 'all').toList(),
+                      onCategorySelected: (id) {
+                        setState(() => _selectedCategoryId = id);
+                      },
+                      onProductSelected: (product) {
+                        // Find a valid outletId from nearby outlets or use a default
+                        final outletId = _outlets.isNotEmpty ? _outlets.first.id : "";
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (context) => ProductDetailsScreen(
+                            product: product, 
+                            outletId: outletId,
+                          ),
+                        ));
+                      },
+                    ),
+                    
+                    const SizedBox(height: HomeSpacing.md),
+                    const HomeTopBanner(),
                   ],
                 ),
               ),
 
               /* CATEGORIES */
               const SizedBox(height: HomeSpacing.lg),
-              // 🔥 UPDATED: Pass selected ID and a callback to update it
               HomeCategoriesSection(
                 loading: _loadingCategories,
                 categories: _categories,
@@ -167,7 +207,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               /* OUTLETS */
               const SizedBox(height: HomeSpacing.xl),
-              // 🔥 UPDATED: Pass the selectedCategoryId to the outlets section for filtering
               HomeOutletsSection(
                 loading: _loadingOutlets,
                 outlets: _outlets,
